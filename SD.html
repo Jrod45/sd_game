@@ -1,0 +1,3137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Santo Domingo Adventure: English City Quest</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+canvas { display: block; }
+
+/* Main Menu */
+#mainMenu {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, #0a1628 0%, #1a3a5c 30%, #2d6a8f 60%, #4da6c9 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 1000; transition: opacity 0.8s;
+}
+#mainMenu.hidden { opacity: 0; pointer-events: none; }
+.menu-title {
+    font-size: 3.5em; color: #FFD700; text-shadow: 3px 3px 6px rgba(0,0,0,0.7), 0 0 30px rgba(255,215,0,0.3);
+    margin-bottom: 10px; font-weight: 900; letter-spacing: 2px; text-align: center;
+}
+.menu-subtitle {
+    font-size: 1.8em; color: #87CEEB; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    margin-bottom: 50px; font-weight: 300;
+}
+.menu-btn {
+    padding: 18px 60px; margin: 10px; font-size: 1.3em; border: 2px solid #FFD700;
+    background: rgba(255,215,0,0.15); color: #FFD700; border-radius: 8px;
+    cursor: pointer; transition: all 0.3s; font-weight: 600; letter-spacing: 1px;
+    backdrop-filter: blur(10px); min-width: 280px;
+}
+.menu-btn:hover {
+    background: rgba(255,215,0,0.4); transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255,215,0,0.3);
+}
+.menu-palm { position: absolute; bottom: 0; opacity: 0.15; pointer-events: none; }
+.menu-info { color: #87CEEB; margin-top: 30px; font-size: 0.9em; opacity: 0.7; }
+
+/* Loading Screen */
+#loadingScreen {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #0a1628; display: none; flex-direction: column;
+    align-items: center; justify-content: center; z-index: 999;
+}
+#loadingScreen.active { display: flex; }
+.loading-bar-bg {
+    width: 400px; height: 8px; background: rgba(255,255,255,0.1);
+    border-radius: 4px; overflow: hidden; margin-top: 20px;
+}
+.loading-bar-fill {
+    width: 0%; height: 100%; background: linear-gradient(90deg, #FFD700, #FFA500);
+    border-radius: 4px; transition: width 0.3s;
+}
+.loading-text { color: #FFD700; font-size: 1.5em; margin-bottom: 10px; }
+.loading-tip { color: #87CEEB; font-size: 0.9em; margin-top: 20px; max-width: 400px; text-align: center; }
+
+/* HUD */
+#hud {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 100; display: none;
+}
+#hud.active { display: block; }
+
+.hud-top-bar {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 15px 20px; pointer-events: none;
+}
+.hud-mission-box {
+    background: rgba(0,0,0,0.7); border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 10px; padding: 12px 18px; max-width: 350px;
+    backdrop-filter: blur(10px);
+}
+.hud-mission-label { color: #FFD700; font-size: 0.75em; font-weight: 700; letter-spacing: 2px; }
+.hud-mission-text { color: #fff; font-size: 0.95em; margin-top: 4px; }
+.hud-mission-progress { color: #87CEEB; font-size: 0.8em; margin-top: 4px; }
+
+.hud-stats {
+    display: flex; gap: 15px; align-items: flex-start;
+}
+.hud-stat {
+    background: rgba(0,0,0,0.7); border-radius: 8px; padding: 8px 14px;
+    text-align: center; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+}
+.hud-stat-value { color: #FFD700; font-size: 1.3em; font-weight: 700; }
+.hud-stat-label { color: #aaa; font-size: 0.65em; letter-spacing: 1px; }
+
+/* Minimap */
+.hud-minimap {
+    position: fixed; bottom: 20px; right: 20px;
+    width: 180px; height: 180px; border-radius: 50%;
+    background: rgba(0,0,0,0.8); border: 3px solid rgba(255,215,0,0.5);
+    overflow: hidden; backdrop-filter: blur(5px);
+}
+#minimapCanvas { width: 100%; height: 100%; border-radius: 50%; }
+
+/* Compass */
+.hud-compass {
+    position: fixed; top: 15px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.6); border-radius: 20px; padding: 5px 20px;
+    color: #fff; font-size: 0.8em; letter-spacing: 3px;
+    backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Stamina/Health bars */
+.hud-bars {
+    position: fixed; bottom: 20px; left: 20px; width: 200px;
+}
+.hud-bar-container {
+    margin-bottom: 8px;
+}
+.hud-bar-label { color: #aaa; font-size: 0.7em; margin-bottom: 2px; }
+.hud-bar {
+    width: 100%; height: 8px; background: rgba(0,0,0,0.6);
+    border-radius: 4px; overflow: hidden;
+}
+.hud-bar-fill-health {
+    width: 100%; height: 100%; background: linear-gradient(90deg, #ff4444, #44ff44);
+    border-radius: 4px; transition: width 0.3s;
+}
+.hud-bar-fill-stamina {
+    width: 100%; height: 100%; background: linear-gradient(90deg, #4488ff, #44ddff);
+    border-radius: 4px; transition: width 0.3s;
+}
+
+/* Interaction Prompt */
+#interactPrompt {
+    position: fixed; bottom: 200px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.8); color: #FFD700; padding: 10px 25px;
+    border-radius: 8px; font-size: 1em; display: none;
+    border: 1px solid rgba(255,215,0,0.3); backdrop-filter: blur(10px);
+    pointer-events: none; z-index: 101;
+}
+
+/* Dialogue Box */
+#dialogueBox {
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+    width: 700px; max-width: 90%; background: rgba(0,10,30,0.92);
+    border: 2px solid rgba(255,215,0,0.4); border-radius: 15px;
+    padding: 20px 25px; display: none; z-index: 200;
+    backdrop-filter: blur(15px); pointer-events: auto;
+}
+.dialogue-speaker { color: #FFD700; font-size: 1em; font-weight: 700; margin-bottom: 8px; }
+.dialogue-text { color: #fff; font-size: 0.95em; line-height: 1.6; }
+.dialogue-continue { color: #87CEEB; font-size: 0.8em; margin-top: 12px; opacity: 0.7; }
+.dialogue-choices { margin-top: 12px; }
+.dialogue-choice {
+    display: block; width: 100%; padding: 10px 15px; margin: 5px 0;
+    background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3);
+    color: #FFD700; border-radius: 6px; cursor: pointer; text-align: left;
+    font-size: 0.9em; pointer-events: auto; transition: all 0.2s;
+}
+.dialogue-choice:hover {
+    background: rgba(255,215,0,0.3); transform: translateX(5px);
+}
+
+/* Pause Menu */
+#pauseMenu {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); display: none; flex-direction: column;
+    align-items: center; justify-content: center; z-index: 500;
+    backdrop-filter: blur(10px);
+}
+#pauseMenu.active { display: flex; }
+.pause-title { color: #FFD700; font-size: 2.5em; margin-bottom: 30px; }
+
+/* Vocabulary Panel */
+#vocabPanel {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 500px; max-width: 90%; max-height: 80vh; background: rgba(0,10,30,0.95);
+    border: 2px solid rgba(255,215,0,0.4); border-radius: 15px;
+    padding: 25px; display: none; z-index: 300; overflow-y: auto;
+    backdrop-filter: blur(15px);
+}
+#vocabPanel.active { display: block; }
+.vocab-title { color: #FFD700; font-size: 1.5em; margin-bottom: 15px; text-align: center; }
+.vocab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vocab-item {
+    background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px;
+    border-left: 3px solid #FFD700;
+}
+.vocab-english { color: #FFD700; font-weight: 700; font-size: 0.95em; }
+.vocab-learned { color: #44ff44; font-size: 0.75em; }
+.vocab-locked { color: #666; font-size: 0.75em; }
+
+/* Notification */
+.notification {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.85); color: #FFD700; padding: 15px 30px;
+    border-radius: 10px; font-size: 1.1em; z-index: 400;
+    border: 1px solid rgba(255,215,0,0.4); backdrop-filter: blur(10px);
+    animation: notifIn 0.4s ease, notifOut 0.4s ease 2.6s forwards;
+    pointer-events: none;
+}
+@keyframes notifIn { from { opacity: 0; transform: translateX(-50%) translateY(-20px); } }
+@keyframes notifOut { to { opacity: 0; transform: translateX(-50%) translateY(-20px); } }
+
+/* Achievement */
+.achievement-popup {
+    position: fixed; top: 100px; right: 20px;
+    background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(30,30,0,0.9));
+    border: 2px solid #FFD700; border-radius: 12px; padding: 15px 20px;
+    z-index: 400; min-width: 280px;
+    animation: achieveIn 0.5s ease, achieveOut 0.5s ease 3.5s forwards;
+    pointer-events: none;
+}
+.achieve-title { color: #FFD700; font-size: 0.8em; letter-spacing: 2px; }
+.achieve-name { color: #fff; font-size: 1.1em; font-weight: 700; margin-top: 4px; }
+.achieve-desc { color: #aaa; font-size: 0.8em; margin-top: 4px; }
+@keyframes achieveIn { from { opacity: 0; transform: translateX(50px); } }
+@keyframes achieveOut { to { opacity: 0; transform: translateX(50px); } }
+
+/* Inventory */
+#inventoryPanel {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 600px; max-width: 90%; background: rgba(0,10,30,0.95);
+    border: 2px solid rgba(255,215,0,0.4); border-radius: 15px;
+    padding: 25px; display: none; z-index: 300;
+    backdrop-filter: blur(15px);
+}
+#inventoryPanel.active { display: block; }
+.inv-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 15px; }
+.inv-slot {
+    aspect-ratio: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; font-size: 0.7em; color: #aaa; padding: 5px;
+}
+.inv-slot.filled { border-color: rgba(255,215,0,0.4); }
+.inv-slot-icon { font-size: 2em; margin-bottom: 4px; }
+.inv-slot-name { color: #FFD700; text-align: center; font-size: 0.85em; }
+
+/* Celebration */
+#celebration {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; z-index: 600; pointer-events: none;
+}
+#celebration.active { display: block; }
+#fireworksCanvas { width: 100%; height: 100%; }
+
+/* Mini-game overlay */
+#minigameOverlay {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 500px; max-width: 90%; background: rgba(0,10,30,0.95);
+    border: 2px solid rgba(255,215,0,0.4); border-radius: 15px;
+    padding: 30px; display: none; z-index: 300; text-align: center;
+    backdrop-filter: blur(15px);
+}
+#minigameOverlay.active { display: block; }
+.minigame-title { color: #FFD700; font-size: 1.5em; margin-bottom: 15px; }
+.minigame-question { color: #fff; font-size: 1.2em; margin-bottom: 20px; }
+.minigame-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.minigame-option {
+    padding: 12px; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3);
+    color: #fff; border-radius: 8px; cursor: pointer; font-size: 1em;
+    transition: all 0.2s; pointer-events: auto;
+}
+.minigame-option:hover { background: rgba(255,215,0,0.3); }
+.minigame-option.correct { background: rgba(0,255,0,0.3); border-color: #0f0; }
+.minigame-option.wrong { background: rgba(255,0,0,0.3); border-color: #f00; }
+
+/* Controls help */
+#controlsHelp {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.7); color: #aaa; padding: 8px 20px;
+    border-radius: 8px; font-size: 0.75em; z-index: 101;
+    pointer-events: none; display: none;
+}
+#controlsHelp.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Main Menu -->
+<div id="mainMenu">
+    <div class="menu-title">SANTO DOMINGO</div>
+    <div class="menu-title" style="font-size:2em; color:#87CEEB; margin-top:-10px;">ADVENTURE</div>
+    <div class="menu-subtitle">English City Quest</div>
+    <button class="menu-btn" onclick="startGame()">🎮 NEW GAME</button>
+    <button class="menu-btn" onclick="loadGame()">💾 CONTINUE</button>
+    <button class="menu-btn" onclick="showControls()">🎯 CONTROLS</button>
+    <div class="menu-info">An Educational 3D Adventure • Learn English Through Exploration</div>
+    <div class="menu-info" style="margin-top:10px; font-size:0.75em;">
+        Arrow Keys: Move & Turn • Space: Jump • E: Interact • Tab: Vocabulary • I: Inventory • Esc: Pause
+    </div>
+</div>
+
+<!-- Loading Screen -->
+<div id="loadingScreen">
+    <div class="loading-text">Building Santo Domingo...</div>
+    <div class="loading-bar-bg"><div class="loading-bar-fill" id="loadingBar"></div></div>
+    <div class="loading-tip" id="loadingTip">Tip: Explore every corner of the city to find hidden collectibles!</div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+    <div class="hud-top-bar">
+        <div class="hud-mission-box">
+            <div class="hud-mission-label">CURRENT MISSION</div>
+            <div class="hud-mission-text" id="hudMissionText">Welcome to Santo Domingo</div>
+            <div class="hud-mission-progress" id="hudMissionProgress">Mission 1 of 10</div>
+        </div>
+        <div class="hud-stats">
+            <div class="hud-stat">
+                <div class="hud-stat-value" id="hudScore">0</div>
+                <div class="hud-stat-label">SCORE</div>
+            </div>
+            <div class="hud-stat">
+                <div class="hud-stat-value" id="hudVocab">0</div>
+                <div class="hud-stat-label">WORDS</div>
+            </div>
+            <div class="hud-stat">
+                <div class="hud-stat-value" id="hudCollect">0</div>
+                <div class="hud-stat-label">ITEMS</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="hud-compass" id="hudCompass">N</div>
+
+    <div class="hud-bars">
+        <div class="hud-bar-container">
+            <div class="hud-bar-label">HEALTH</div>
+            <div class="hud-bar"><div class="hud-bar-fill-health" id="healthBar"></div></div>
+        </div>
+        <div class="hud-bar-container">
+            <div class="hud-bar-label">STAMINA</div>
+            <div class="hud-bar"><div class="hud-bar-fill-stamina" id="staminaBar"></div></div>
+        </div>
+    </div>
+
+    <div class="hud-minimap">
+        <canvas id="minimapCanvas" width="180" height="180"></canvas>
+    </div>
+</div>
+
+<!-- Interact Prompt -->
+<div id="interactPrompt">Press <strong>E</strong> to interact</div>
+
+<!-- Dialogue Box -->
+<div id="dialogueBox">
+    <div class="dialogue-speaker" id="dialogueSpeaker">NPC</div>
+    <div class="dialogue-text" id="dialogueText"></div>
+    <div class="dialogue-choices" id="dialogueChoices"></div>
+    <div class="dialogue-continue" id="dialogueContinue">Press E to continue</div>
+</div>
+
+<!-- Pause Menu -->
+<div id="pauseMenu">
+    <div class="pause-title">PAUSED</div>
+    <button class="menu-btn" onclick="resumeGame()">▶ RESUME</button>
+    <button class="menu-btn" onclick="saveGame()">💾 SAVE GAME</button>
+    <button class="menu-btn" onclick="toggleVocabPanel()">📖 VOCABULARY</button>
+    <button class="menu-btn" onclick="toggleInventoryPanel()">🎒 INVENTORY</button>
+    <button class="menu-btn" onclick="quitToMenu()">🏠 MAIN MENU</button>
+</div>
+
+<!-- Vocabulary Panel -->
+<div id="vocabPanel">
+    <div class="vocab-title">📖 Vocabulary Book</div>
+    <div class="vocab-grid" id="vocabGrid"></div>
+    <button class="menu-btn" style="margin-top:15px;width:100%;pointer-events:auto;" onclick="toggleVocabPanel()">Close</button>
+</div>
+
+<!-- Inventory Panel -->
+<div id="inventoryPanel">
+    <div class="vocab-title">🎒 Inventory</div>
+    <div class="inv-grid" id="invGrid"></div>
+    <button class="menu-btn" style="margin-top:15px;width:100%;pointer-events:auto;" onclick="toggleInventoryPanel()">Close</button>
+</div>
+
+<!-- Mini-game Overlay -->
+<div id="minigameOverlay">
+    <div class="minigame-title" id="minigameTitle">Vocabulary Challenge!</div>
+    <div class="minigame-question" id="minigameQuestion"></div>
+    <div class="minigame-options" id="minigameOptions"></div>
+</div>
+
+<!-- Celebration -->
+<div id="celebration">
+    <canvas id="fireworksCanvas"></canvas>
+</div>
+
+<!-- Controls Help -->
+<div id="controlsHelp">
+    ↑↓ Move • ←→ Turn • SPACE Jump • E Interact • TAB Vocab • I Inventory • ESC Pause
+</div>
+
+<script>
+// ============================================================================
+// SANTO DOMINGO ADVENTURE: ENGLISH CITY QUEST
+// Complete Game Engine
+// ============================================================================
+
+// ===== THREE.JS INLINE (minimal WebGL framework) =====
+// We implement a lightweight but complete 3D engine
+
+const PI = Math.PI, TAU = PI*2, DEG = PI/180;
+const sin = Math.sin, cos = Math.cos, abs = Math.abs, floor = Math.floor;
+const min = Math.min, max = Math.max, sqrt = Math.sqrt, random = Math.random;
+const clamp = (v,a,b) => max(a,min(b,v));
+const lerp = (a,b,t) => a+(b-a)*t;
+const smoothstep = (a,b,t) => { t=clamp((t-a)/(b-a),0,1); return t*t*(3-2*t); };
+
+// ===== WebGL Renderer =====
+class Renderer {
+    constructor() {
+        this.canvas = document.createElement('canvas');
+        document.body.prepend(this.canvas);
+        this.gl = this.canvas.getContext('webgl2', {
+            antialias: true, alpha: false,
+            powerPreference: 'high-performance'
+        }) || this.canvas.getContext('webgl', { antialias: true });
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.programs = {};
+        this.initShaders();
+        this.gl.enable(this.gl.DEPTH_TEST);
+        this.gl.enable(this.gl.CULL_FACE);
+        this.gl.clearColor(0.4, 0.6, 0.9, 1.0);
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.aspect = this.canvas.width / this.canvas.height;
+        if (this.gl) this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    initShaders() {
+        const gl = this.gl;
+
+        // Main shader with lighting
+        const vsMain = `
+            attribute vec3 aPos;
+            attribute vec3 aNorm;
+            attribute vec2 aUV;
+            attribute vec3 aColor;
+            uniform mat4 uMVP;
+            uniform mat4 uModel;
+            uniform mat3 uNormMat;
+            varying vec3 vNorm;
+            varying vec3 vWorldPos;
+            varying vec2 vUV;
+            varying vec3 vColor;
+            varying float vFog;
+            void main() {
+                vec4 worldPos = uModel * vec4(aPos, 1.0);
+                vWorldPos = worldPos.xyz;
+                vNorm = normalize(uNormMat * aNorm);
+                vUV = aUV;
+                vColor = aColor;
+                gl_Position = uMVP * vec4(aPos, 1.0);
+                vFog = clamp(length(worldPos.xyz) / 500.0, 0.0, 1.0);
+            }
+        `;
+
+        const fsMain = `
+            precision mediump float;
+            varying vec3 vNorm;
+            varying vec3 vWorldPos;
+            varying vec2 vUV;
+            varying vec3 vColor;
+            varying float vFog;
+            uniform vec3 uLightDir;
+            uniform vec3 uLightColor;
+            uniform vec3 uAmbient;
+            uniform vec3 uBaseColor;
+            uniform float uMetallic;
+            uniform float uRoughness;
+            uniform vec3 uCamPos;
+            uniform vec3 uFogColor;
+            uniform float uTime;
+            uniform float uEmissive;
+
+            void main() {
+                vec3 N = normalize(vNorm);
+                vec3 L = normalize(uLightDir);
+                vec3 V = normalize(uCamPos - vWorldPos);
+                vec3 H = normalize(L + V);
+
+                float NdotL = max(dot(N, L), 0.0);
+                float NdotH = max(dot(N, H), 0.0);
+
+                vec3 albedo = uBaseColor * vColor;
+
+                // Diffuse
+                vec3 diffuse = albedo * NdotL * uLightColor;
+
+                // Specular (Blinn-Phong approximation)
+                float spec = pow(NdotH, mix(8.0, 128.0, 1.0 - uRoughness));
+                vec3 specular = uLightColor * spec * mix(0.04, 0.5, uMetallic);
+
+                // Ambient with hemisphere
+                vec3 ambient = albedo * uAmbient * (0.5 + 0.5 * N.y);
+
+                // Rim light
+                float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+                vec3 rimColor = vec3(0.2, 0.3, 0.5) * rim * 0.3;
+
+                vec3 color = ambient + diffuse + specular + rimColor;
+                color += albedo * uEmissive;
+
+                // Fog
+                color = mix(color, uFogColor, vFog * vFog);
+
+                // Tone mapping
+                color = color / (color + vec3(1.0));
+                color = pow(color, vec3(1.0/2.2));
+
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        this.programs.main = this.createProgram(vsMain, fsMain);
+
+        // Water shader
+        const vsWater = `
+            attribute vec3 aPos;
+            attribute vec3 aNorm;
+            attribute vec2 aUV;
+            attribute vec3 aColor;
+            uniform mat4 uMVP;
+            uniform mat4 uModel;
+            uniform float uTime;
+            varying vec3 vWorldPos;
+            varying vec2 vUV;
+            varying float vFog;
+            void main() {
+                vec3 pos = aPos;
+                pos.y += sin(pos.x * 0.3 + uTime * 2.0) * 0.3 + cos(pos.z * 0.2 + uTime * 1.5) * 0.2;
+                vec4 worldPos = uModel * vec4(pos, 1.0);
+                vWorldPos = worldPos.xyz;
+                vUV = aUV;
+                gl_Position = uMVP * vec4(pos, 1.0);
+                vFog = clamp(length(worldPos.xyz) / 500.0, 0.0, 1.0);
+            }
+        `;
+
+        const fsWater = `
+            precision mediump float;
+            varying vec3 vWorldPos;
+            varying vec2 vUV;
+            varying float vFog;
+            uniform float uTime;
+            uniform vec3 uCamPos;
+            uniform vec3 uFogColor;
+            void main() {
+                vec3 waterColor = vec3(0.05, 0.3, 0.5);
+                float wave = sin(vWorldPos.x * 0.5 + uTime * 3.0) * 0.5 + 0.5;
+                wave += sin(vWorldPos.z * 0.3 + uTime * 2.0) * 0.5 + 0.5;
+                waterColor += vec3(0.1, 0.15, 0.1) * wave * 0.3;
+
+                // Fresnel
+                vec3 V = normalize(uCamPos - vWorldPos);
+                float fresnel = pow(1.0 - max(dot(vec3(0,1,0), V), 0.0), 3.0);
+                vec3 skyReflect = vec3(0.4, 0.6, 0.9);
+                waterColor = mix(waterColor, skyReflect, fresnel * 0.5);
+
+                // Foam
+                float foam = smoothstep(0.7, 0.8, wave);
+                waterColor += vec3(1.0) * foam * 0.3;
+
+                waterColor = mix(waterColor, uFogColor, vFog * vFog);
+                waterColor = waterColor / (waterColor + vec3(1.0));
+                waterColor = pow(waterColor, vec3(1.0/2.2));
+                gl_FragColor = vec4(waterColor, 0.85);
+            }
+        `;
+
+        this.programs.water = this.createProgram(vsWater, fsWater);
+    }
+
+    createProgram(vs, fs) {
+        const gl = this.gl;
+        const vShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vShader, vs);
+        gl.compileShader(vShader);
+        if (!gl.getShaderParameter(vShader, gl.COMPILE_STATUS)) {
+            console.error('VS:', gl.getShaderInfoLog(vShader));
+        }
+
+        const fShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fShader, fs);
+        gl.compileShader(fShader);
+        if (!gl.getShaderParameter(fShader, gl.COMPILE_STATUS)) {
+            console.error('FS:', gl.getShaderInfoLog(fShader));
+        }
+
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vShader);
+        gl.attachShader(prog, fShader);
+        gl.bindAttribLocation(prog, 0, 'aPos');
+        gl.bindAttribLocation(prog, 1, 'aNorm');
+        gl.bindAttribLocation(prog, 2, 'aUV');
+        gl.bindAttribLocation(prog, 3, 'aColor');
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+            console.error('LINK:', gl.getProgramInfoLog(prog));
+        }
+
+        const info = { program: prog, uniforms: {}, attributes: {} };
+        const numUniforms = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS);
+        for (let i = 0; i < numUniforms; i++) {
+            const u = gl.getActiveUniform(prog, i);
+            info.uniforms[u.name] = gl.getUniformLocation(prog, u.name);
+        }
+        return info;
+    }
+}
+
+// ===== Math Utilities =====
+class Vec3 {
+    constructor(x=0,y=0,z=0) { this.x=x; this.y=y; this.z=z; }
+    set(x,y,z) { this.x=x; this.y=y; this.z=z; return this; }
+    copy(v) { this.x=v.x; this.y=v.y; this.z=v.z; return this; }
+    clone() { return new Vec3(this.x,this.y,this.z); }
+    add(v) { return new Vec3(this.x+v.x, this.y+v.y, this.z+v.z); }
+    sub(v) { return new Vec3(this.x-v.x, this.y-v.y, this.z-v.z); }
+    mul(s) { return new Vec3(this.x*s, this.y*s, this.z*s); }
+    dot(v) { return this.x*v.x+this.y*v.y+this.z*v.z; }
+    cross(v) { return new Vec3(this.y*v.z-this.z*v.y, this.z*v.x-this.x*v.z, this.x*v.y-this.y*v.x); }
+    len() { return sqrt(this.x*this.x+this.y*this.y+this.z*this.z); }
+    lenSq() { return this.x*this.x+this.y*this.y+this.z*this.z; }
+    normalize() { const l=this.len(); if(l>0.0001){this.x/=l;this.y/=l;this.z/=l;} return this; }
+    normalized() { return this.clone().normalize(); }
+    lerp(v,t) { return new Vec3(lerp(this.x,v.x,t), lerp(this.y,v.y,t), lerp(this.z,v.z,t)); }
+    distTo(v) { return this.sub(v).len(); }
+}
+
+class Mat4 {
+    constructor() { this.m = new Float32Array(16); this.identity(); }
+    identity() {
+        this.m.fill(0);
+        this.m[0]=this.m[5]=this.m[10]=this.m[15]=1;
+        return this;
+    }
+    perspective(fov, aspect, near, far) {
+        const f = 1/Math.tan(fov/2);
+        const nf = 1/(near-far);
+        this.m.fill(0);
+        this.m[0] = f/aspect;
+        this.m[5] = f;
+        this.m[10] = (far+near)*nf;
+        this.m[11] = -1;
+        this.m[14] = 2*far*near*nf;
+        return this;
+    }
+    lookAt(eye, center, up) {
+        const z = eye.sub(center).normalized();
+        const x = up.cross(z).normalized();
+        const y = z.cross(x);
+        this.m[0]=x.x; this.m[4]=x.y; this.m[8]=x.z; this.m[12]=-x.dot(eye);
+        this.m[1]=y.x; this.m[5]=y.y; this.m[9]=y.z; this.m[13]=-y.dot(eye);
+        this.m[2]=z.x; this.m[6]=z.y; this.m[10]=z.z; this.m[14]=-z.dot(eye);
+        this.m[3]=0; this.m[7]=0; this.m[11]=0; this.m[15]=1;
+        return this;
+    }
+    translate(x,y,z) {
+        const t = new Mat4();
+        t.m[12]=x; t.m[13]=y; t.m[14]=z;
+        return this.multiply(t);
+    }
+    rotateY(angle) {
+        const t = new Mat4();
+        const c=cos(angle), s=sin(angle);
+        t.m[0]=c; t.m[8]=s; t.m[2]=-s; t.m[10]=c;
+        return this.multiply(t);
+    }
+    rotateX(angle) {
+        const t = new Mat4();
+        const c=cos(angle), s=sin(angle);
+        t.m[5]=c; t.m[9]=-s; t.m[6]=s; t.m[10]=c;
+        return this.multiply(t);
+    }
+    scale(x,y,z) {
+        const t = new Mat4();
+        t.m[0]=x; t.m[5]=y; t.m[10]=z;
+        return this.multiply(t);
+    }
+    multiply(b) {
+        const a=this.m, bm=b.m, r=new Mat4();
+        for(let i=0;i<4;i++) for(let j=0;j<4;j++) {
+            r.m[j*4+i] = a[i]*bm[j*4]+a[4+i]*bm[j*4+1]+a[8+i]*bm[j*4+2]+a[12+i]*bm[j*4+3];
+        }
+        this.m.set(r.m);
+        return this;
+    }
+    getNormalMatrix() {
+        const m=this.m, r=new Float32Array(9);
+        r[0]=m[0]; r[1]=m[1]; r[2]=m[2];
+        r[3]=m[4]; r[4]=m[5]; r[5]=m[6];
+        r[6]=m[8]; r[7]=m[9]; r[8]=m[10];
+        return r;
+    }
+    clone() { const n=new Mat4(); n.m.set(this.m); return n; }
+    static Translation(x,y,z) { return new Mat4().translate(x,y,z); }
+    static RotationY(a) { return new Mat4().rotateY(a); }
+}
+
+// ===== Mesh Generation =====
+class MeshBuilder {
+    constructor() {
+        this.positions = [];
+        this.normals = [];
+        this.uvs = [];
+        this.colors = [];
+        this.indices = [];
+        this.vertCount = 0;
+    }
+
+    addVertex(px,py,pz, nx,ny,nz, u,v, cr,cg,cb) {
+        this.positions.push(px,py,pz);
+        this.normals.push(nx,ny,nz);
+        this.uvs.push(u,v);
+        this.colors.push(cr,cg,cb);
+        return this.vertCount++;
+    }
+
+    addTriangle(a,b,c) { this.indices.push(a,b,c); }
+
+    addQuad(a,b,c,d) { this.addTriangle(a,b,c); this.addTriangle(a,c,d); }
+
+    addBox(cx,cy,cz, sx,sy,sz, cr,cg,cb) {
+        const hx=sx/2, hy=sy/2, hz=sz/2;
+        const faces = [
+            // front
+            [[-hx,-hy,hz],[hx,-hy,hz],[hx,hy,hz],[-hx,hy,hz],[0,0,1]],
+            // back
+            [[hx,-hy,-hz],[-hx,-hy,-hz],[-hx,hy,-hz],[hx,hy,-hz],[0,0,-1]],
+            // top
+            [[-hx,hy,hz],[hx,hy,hz],[hx,hy,-hz],[-hx,hy,-hz],[0,1,0]],
+            // bottom
+            [[-hx,-hy,-hz],[hx,-hy,-hz],[hx,-hy,hz],[-hx,-hy,hz],[0,-1,0]],
+            // right
+            [[hx,-hy,hz],[hx,-hy,-hz],[hx,hy,-hz],[hx,hy,hz],[1,0,0]],
+            // left
+            [[-hx,-hy,-hz],[-hx,-hy,hz],[-hx,hy,hz],[-hx,hy,-hz],[-1,0,0]],
+        ];
+
+        for (const [v0,v1,v2,v3,n] of faces) {
+            const i = this.vertCount;
+            this.addVertex(cx+v0[0],cy+v0[1],cz+v0[2], n[0],n[1],n[2], 0,0, cr,cg,cb);
+            this.addVertex(cx+v1[0],cy+v1[1],cz+v1[2], n[0],n[1],n[2], 1,0, cr,cg,cb);
+            this.addVertex(cx+v2[0],cy+v2[1],cz+v2[2], n[0],n[1],n[2], 1,1, cr,cg,cb);
+            this.addVertex(cx+v3[0],cy+v3[1],cz+v3[2], n[0],n[1],n[2], 0,1, cr,cg,cb);
+            this.addQuad(i, i+1, i+2, i+3);
+        }
+    }
+
+    addCylinder(cx,cy,cz, radius, height, segments, cr,cg,cb) {
+        const base = this.vertCount;
+        for (let i = 0; i <= segments; i++) {
+            const a = (i/segments)*TAU;
+            const x = cos(a)*radius, z = sin(a)*radius;
+            this.addVertex(cx+x, cy, cz+z, x/radius,0,z/radius, i/segments,0, cr,cg,cb);
+            this.addVertex(cx+x, cy+height, cz+z, x/radius,0,z/radius, i/segments,1, cr,cg,cb);
+        }
+        for (let i = 0; i < segments; i++) {
+            const a = base + i*2;
+            this.addQuad(a, a+2, a+3, a+1);
+        }
+        // Top cap
+        const topCenter = this.addVertex(cx,cy+height,cz, 0,1,0, 0.5,0.5, cr,cg,cb);
+        for (let i = 0; i < segments; i++) {
+            const a1 = (i/segments)*TAU, a2 = ((i+1)/segments)*TAU;
+            const i1 = this.addVertex(cx+cos(a1)*radius,cy+height,cz+sin(a1)*radius, 0,1,0, 0,0, cr,cg,cb);
+            const i2 = this.addVertex(cx+cos(a2)*radius,cy+height,cz+sin(a2)*radius, 0,1,0, 0,0, cr,cg,cb);
+            this.addTriangle(topCenter, i1, i2);
+        }
+    }
+
+    addSphere(cx,cy,cz, radius, segH, segV, cr,cg,cb) {
+        const base = this.vertCount;
+        for (let y = 0; y <= segV; y++) {
+            const v = y/segV;
+            const phi = v * PI;
+            for (let x = 0; x <= segH; x++) {
+                const u = x/segH;
+                const theta = u * TAU;
+                const nx = sin(phi)*cos(theta);
+                const ny = cos(phi);
+                const nz = sin(phi)*sin(theta);
+                this.addVertex(cx+nx*radius, cy+ny*radius, cz+nz*radius, nx,ny,nz, u,v, cr,cg,cb);
+            }
+        }
+        for (let y = 0; y < segV; y++) {
+            for (let x = 0; x < segH; x++) {
+                const a = base + y*(segH+1)+x;
+                const b = a + segH+1;
+                this.addQuad(a, a+1, b+1, b);
+            }
+        }
+    }
+
+    addPlane(cx,cy,cz, sx,sz, cr,cg,cb) {
+        const hx=sx/2, hz=sz/2;
+        const i = this.vertCount;
+        this.addVertex(cx-hx,cy,cz-hz, 0,1,0, 0,0, cr,cg,cb);
+        this.addVertex(cx+hx,cy,cz-hz, 0,1,0, 1,0, cr,cg,cb);
+        this.addVertex(cx+hx,cy,cz+hz, 0,1,0, 1,1, cr,cg,cb);
+        this.addVertex(cx-hx,cy,cz+hz, 0,1,0, 0,1, cr,cg,cb);
+        this.addQuad(i,i+1,i+2,i+3);
+    }
+
+    addCone(cx,cy,cz, radius,height, segments, cr,cg,cb) {
+        const tip = this.addVertex(cx,cy+height,cz, 0,1,0, 0.5,0, cr,cg,cb);
+        for (let i = 0; i < segments; i++) {
+            const a1 = (i/segments)*TAU, a2 = ((i+1)/segments)*TAU;
+            const nx1 = cos(a1), nz1 = sin(a1);
+            const nx2 = cos(a2), nz2 = sin(a2);
+            const v1 = this.addVertex(cx+nx1*radius,cy,cz+nz1*radius, nx1,0.3,nz1, 0,1, cr,cg,cb);
+            const v2 = this.addVertex(cx+nx2*radius,cy,cz+nz2*radius, nx2,0.3,nz2, 1,1, cr,cg,cb);
+            this.addTriangle(tip, v1, v2);
+        }
+    }
+
+    build(gl) {
+        const mesh = {
+            vao: null,
+            indexCount: this.indices.length,
+            buffers: {}
+        };
+
+        mesh.buffers.pos = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.pos);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.positions), gl.STATIC_DRAW);
+
+        mesh.buffers.norm = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.norm);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.normals), gl.STATIC_DRAW);
+
+        mesh.buffers.uv = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.uv);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.uvs), gl.STATIC_DRAW);
+
+        mesh.buffers.color = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.color);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.colors), gl.STATIC_DRAW);
+
+        mesh.buffers.idx = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.buffers.idx);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(this.indices), gl.STATIC_DRAW);
+
+        return mesh;
+    }
+}
+
+function bindMesh(gl, mesh) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.pos);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.norm);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.uv);
+    gl.enableVertexAttribArray(2);
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.color);
+    gl.enableVertexAttribArray(3);
+    gl.vertexAttribPointer(3, 3, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.buffers.idx);
+}
+
+// ===== Audio System =====
+class AudioSystem {
+    constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.musicGain = null;
+        this.sfxGain = null;
+        this.initialized = false;
+    }
+
+    init() {
+        if (this.initialized) return;
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.connect(this.ctx.destination);
+            this.musicGain = this.ctx.createGain();
+            this.musicGain.gain.value = 0.3;
+            this.musicGain.connect(this.masterGain);
+            this.sfxGain = this.ctx.createGain();
+            this.sfxGain.gain.value = 0.5;
+            this.sfxGain.connect(this.masterGain);
+            this.initialized = true;
+        } catch(e) { console.log('Audio not available'); }
+    }
+
+    playTone(freq, duration, type='sine', gain=0.15) {
+        if (!this.initialized) return;
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        g.gain.setValueAtTime(gain, this.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        osc.connect(g);
+        g.connect(this.sfxGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    }
+
+    playCollect() {
+        this.playTone(523, 0.1, 'sine', 0.2);
+        setTimeout(() => this.playTone(659, 0.1, 'sine', 0.2), 80);
+        setTimeout(() => this.playTone(784, 0.15, 'sine', 0.2), 160);
+    }
+
+    playSuccess() {
+        [523,659,784,1047].forEach((f,i) => {
+            setTimeout(() => this.playTone(f, 0.2, 'sine', 0.15), i*120);
+        });
+    }
+
+    playJump() { this.playTone(330, 0.15, 'square', 0.08); }
+
+    playInteract() { this.playTone(440, 0.1, 'sine', 0.1); }
+
+    playWrong() {
+        this.playTone(200, 0.2, 'sawtooth', 0.1);
+        setTimeout(() => this.playTone(180, 0.3, 'sawtooth', 0.1), 150);
+    }
+
+    playAchievement() {
+        [523,659,784,880,1047].forEach((f,i) => {
+            setTimeout(() => this.playTone(f, 0.25, 'sine', 0.12), i*100);
+        });
+    }
+
+    playFootstep() {
+        if (!this.initialized) return;
+        const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.05, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            data[i] = (random() * 2 - 1) * Math.exp(-i / (data.length * 0.3)) * 0.05;
+        }
+        const src = this.ctx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(this.sfxGain);
+        src.start();
+    }
+
+    startAmbient() {
+        if (!this.initialized) return;
+        // Gentle ambient pad
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.value = 110;
+        osc2.type = 'sine';
+        osc2.frequency.value = 165;
+        g.gain.value = 0.02;
+        osc1.connect(g);
+        osc2.connect(g);
+        g.connect(this.musicGain);
+        osc1.start();
+        osc2.start();
+    }
+}
+
+// ===== Input System =====
+class InputSystem {
+    constructor() {
+        this.keys = {};
+        this.keysDown = {};
+        window.addEventListener('keydown', e => {
+            if (!this.keys[e.code]) this.keysDown[e.code] = true;
+            this.keys[e.code] = true;
+            if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab','KeyI'].includes(e.code)) {
+                e.preventDefault();
+            }
+        });
+        window.addEventListener('keyup', e => {
+            this.keys[e.code] = false;
+        });
+    }
+
+    isDown(code) { return !!this.keys[code]; }
+
+    wasPressed(code) {
+        if (this.keysDown[code]) { this.keysDown[code] = false; return true; }
+        return false;
+    }
+
+    clearFrame() { this.keysDown = {}; }
+}
+
+// ===== Game State =====
+class GameState {
+    constructor() {
+        this.reset();
+    }
+
+    reset() {
+        this.score = 0;
+        this.currentMission = 0;
+        this.missionsCompleted = [false,false,false,false,false,false,false,false,false,false];
+        this.vocabularyLearned = new Set();
+        this.collectibles = [];
+        this.inventory = [];
+        this.achievements = [];
+        this.health = 100;
+        this.stamina = 100;
+        this.totalCollectibles = 0;
+        this.playTime = 0;
+        this.checkpoints = [];
+        this.gameComplete = false;
+    }
+
+    save() {
+        const data = {
+            score: this.score,
+            currentMission: this.currentMission,
+            missionsCompleted: this.missionsCompleted,
+            vocabularyLearned: Array.from(this.vocabularyLearned),
+            collectibles: this.collectibles,
+            inventory: this.inventory,
+            achievements: this.achievements,
+            health: this.health,
+            playTime: this.playTime
+        };
+        localStorage.setItem('sdaCityQuest', JSON.stringify(data));
+    }
+
+    load() {
+        const raw = localStorage.getItem('sdaCityQuest');
+        if (!raw) return false;
+        try {
+            const data = JSON.parse(raw);
+            Object.assign(this, data);
+            this.vocabularyLearned = new Set(data.vocabularyLearned);
+            return true;
+        } catch(e) { return false; }
+    }
+}
+
+// ===== Vocabulary System =====
+const VOCABULARY = {
+    school: { word: 'School', definition: 'A place where students learn', icon: '🏫' },
+    hospital: { word: 'Hospital', definition: 'A place where sick people get treatment', icon: '🏥' },
+    supermarket: { word: 'Supermarket', definition: 'A large store that sells food and supplies', icon: '🏪' },
+    park: { word: 'Park', definition: 'An outdoor area for recreation', icon: '🌳' },
+    museum: { word: 'Museum', definition: 'A building that displays art and history', icon: '🏛️' },
+    library: { word: 'Library', definition: 'A place with many books to read and borrow', icon: '📚' },
+    restaurant: { word: 'Restaurant', definition: 'A place where people eat meals', icon: '🍽️' },
+    police_station: { word: 'Police Station', definition: 'Where police officers work', icon: '🚔' },
+    fire_station: { word: 'Fire Station', definition: 'Where firefighters and fire trucks stay', icon: '🚒' },
+    hotel: { word: 'Hotel', definition: 'A place where travelers sleep', icon: '🏨' },
+    airport: { word: 'Airport', definition: 'Where airplanes take off and land', icon: '✈️' },
+    beach: { word: 'Beach', definition: 'A sandy area by the ocean', icon: '🏖️' },
+    bus_station: { word: 'Bus Station', definition: 'Where buses pick up passengers', icon: '🚌' },
+    pharmacy: { word: 'Pharmacy', definition: 'A store that sells medicine', icon: '💊' },
+    bank: { word: 'Bank', definition: 'A place that keeps money safe', icon: '🏦' },
+    bookstore: { word: 'Bookstore', definition: 'A shop that sells books', icon: '📖' },
+    movie_theater: { word: 'Movie Theater', definition: 'A place to watch films', icon: '🎬' },
+    post_office: { word: 'Post Office', definition: 'A place to send mail', icon: '📮' },
+    bakery: { word: 'Bakery', definition: 'A shop that makes bread and cakes', icon: '🍞' },
+    gym: { word: 'Gym', definition: 'A place for exercise', icon: '💪' },
+};
+
+// ===== City Districts & Buildings =====
+const DISTRICTS = {
+    colonial: { center: new Vec3(0, 0, 0), radius: 80, name: 'Colonial District' },
+    downtown: { center: new Vec3(150, 0, 0), radius: 100, name: 'Downtown' },
+    malecon: { center: new Vec3(0, 0, -120), radius: 120, name: 'Malecón Waterfront' },
+    residential: { center: new Vec3(-150, 0, 50), radius: 80, name: 'Residential Area' },
+    commercial: { center: new Vec3(100, 0, 100), radius: 70, name: 'Shopping District' },
+    parkDistrict: { center: new Vec3(-80, 0, -50), radius: 60, name: 'City Park' },
+    museum_d: { center: new Vec3(50, 0, -80), radius: 50, name: 'Museum District' },
+    airport: { center: new Vec3(250, 0, -50), radius: 80, name: 'Airport Area' },
+    hotel_d: { center: new Vec3(200, 0, 80), radius: 60, name: 'Hotel District' },
+    education: { center: new Vec3(-100, 0, 120), radius: 60, name: 'Education District' },
+    beach: { center: new Vec3(-50, 0, -180), radius: 80, name: 'Beachfront' },
+};
+
+// ===== Building Definitions =====
+const BUILDINGS = [];
+
+function addBuilding(name, vocabKey, x, z, w, h, d, color, roofColor, type='box') {
+    BUILDINGS.push({ name, vocabKey, x, z, w, h, d, color, roofColor, type,
+        interactable: !!vocabKey, visited: false });
+}
+
+// Colonial District buildings
+addBuilding('School', 'school', -20, 30, 18, 12, 14, [0.95,0.9,0.8], [0.6,0.2,0.15]);
+addBuilding('Library', 'library', 20, -10, 16, 10, 12, [0.85,0.8,0.7], [0.5,0.3,0.2]);
+addBuilding('Colonial Church', null, 0, 0, 20, 18, 15, [0.92,0.88,0.78], [0.5,0.25,0.15]);
+addBuilding('Colonial House 1', null, -35, 10, 10, 8, 10, [0.9,0.85,0.6], [0.6,0.3,0.2]);
+addBuilding('Colonial House 2', null, -35, -15, 12, 9, 10, [0.85,0.75,0.55], [0.55,0.28,0.18]);
+addBuilding('Colonial House 3', null, 35, 15, 11, 8, 11, [0.88,0.82,0.65], [0.58,0.3,0.2]);
+addBuilding('Bakery', 'bakery', 40, -20, 10, 7, 10, [0.95,0.85,0.7], [0.5,0.25,0.15]);
+addBuilding('Post Office', 'post_office', -10, -35, 12, 8, 10, [0.8,0.82,0.85], [0.3,0.3,0.5]);
+
+// Downtown
+addBuilding('Bank', 'bank', 130, -10, 16, 22, 14, [0.5,0.55,0.6], [0.3,0.35,0.4]);
+addBuilding('Restaurant', 'restaurant', 160, 20, 14, 8, 12, [0.8,0.4,0.3], [0.6,0.3,0.2]);
+addBuilding('Movie Theater', 'movie_theater', 175, -15, 18, 10, 16, [0.3,0.2,0.35], [0.2,0.15,0.25]);
+addBuilding('Office Tower 1', null, 140, 35, 14, 30, 14, [0.6,0.65,0.7], [0.4,0.45,0.5]);
+addBuilding('Office Tower 2', null, 165, 45, 12, 25, 12, [0.55,0.6,0.65], [0.35,0.4,0.45]);
+addBuilding('Pharmacy', 'pharmacy', 120, 15, 10, 7, 10, [0.9,0.95,0.9], [0.2,0.6,0.3]);
+
+// Waterfront/Malecon
+addBuilding('Malecon Tower', null, 10, -110, 10, 15, 10, [0.7,0.75,0.8], [0.5,0.55,0.6]);
+addBuilding('Seafood Place', null, -20, -105, 12, 6, 10, [0.3,0.5,0.7], [0.25,0.4,0.6]);
+
+// Residential
+addBuilding('House 1', null, -140, 30, 10, 7, 10, [0.85,0.8,0.65], [0.6,0.3,0.2]);
+addBuilding('House 2', null, -160, 30, 10, 7, 10, [0.7,0.8,0.75], [0.5,0.3,0.25]);
+addBuilding('House 3', null, -140, 55, 10, 8, 10, [0.9,0.85,0.7], [0.55,0.3,0.2]);
+addBuilding('House 4', null, -160, 55, 10, 7, 10, [0.8,0.75,0.6], [0.6,0.3,0.15]);
+addBuilding('House 5', null, -140, 75, 10, 7, 10, [0.75,0.8,0.85], [0.45,0.35,0.3]);
+addBuilding('House 6', null, -160, 75, 10, 8, 10, [0.88,0.82,0.7], [0.5,0.28,0.18]);
+
+// Commercial
+addBuilding('Supermarket', 'supermarket', 90, 90, 20, 8, 16, [0.2,0.5,0.8], [0.15,0.4,0.65]);
+addBuilding('Bookstore', 'bookstore', 115, 110, 10, 7, 10, [0.6,0.4,0.25], [0.5,0.3,0.2]);
+addBuilding('Gym', 'gym', 85, 115, 14, 8, 12, [0.3,0.3,0.3], [0.2,0.2,0.2]);
+addBuilding('Shopping Mall', null, 110, 85, 22, 12, 18, [0.75,0.75,0.8], [0.5,0.5,0.55]);
+
+// Park area
+addBuilding('Park Gazebo', 'park', -80, -50, 8, 6, 8, [0.9,0.9,0.85], [0.6,0.2,0.15]);
+
+// Museum district
+addBuilding('Museum', 'museum', 50, -80, 22, 14, 18, [0.85,0.82,0.78], [0.5,0.5,0.55]);
+
+// Airport area
+addBuilding('Airport Terminal', 'airport', 250, -50, 40, 12, 25, [0.7,0.72,0.75], [0.5,0.52,0.55]);
+addBuilding('Control Tower', null, 275, -30, 8, 25, 8, [0.6,0.65,0.7], [0.4,0.45,0.5]);
+
+// Hotel district
+addBuilding('Grand Hotel', 'hotel', 200, 80, 18, 20, 16, [0.85,0.8,0.6], [0.65,0.5,0.3]);
+addBuilding('Bus Station', 'bus_station', 220, 60, 16, 6, 20, [0.4,0.5,0.6], [0.3,0.4,0.5]);
+
+// Education
+addBuilding('University', null, -100, 130, 25, 14, 20, [0.8,0.78,0.72], [0.5,0.3,0.2]);
+
+// Emergency services
+addBuilding('Hospital', 'hospital', -60, 90, 20, 14, 16, [0.95,0.95,0.95], [0.15,0.5,0.15]);
+addBuilding('Police Station', 'police_station', 60, 50, 14, 10, 12, [0.3,0.35,0.55], [0.25,0.3,0.45]);
+addBuilding('Fire Station', 'fire_station', 80, 50, 14, 10, 14, [0.7,0.2,0.15], [0.55,0.15,0.1]);
+
+// ===== Mission Definitions =====
+const MISSIONS = [
+    {
+        id: 0, title: 'Welcome to Santo Domingo',
+        description: 'Find the School in the Colonial District',
+        objective: 'Navigate to the School building',
+        targetBuilding: 'School',
+        targetVocab: 'school',
+        reward: 100,
+        dialogues: [
+            { speaker: 'Guide María', text: 'Welcome to Santo Domingo! I am María, your guide. Let\'s learn English while exploring our beautiful city!' },
+            { speaker: 'Guide María', text: 'Your first task: Find the SCHOOL. A school is where students learn new things. Look for the building with the flag!' },
+        ],
+        completionDialogue: [
+            { speaker: 'Teacher Carlos', text: 'Welcome to the School! Great job finding us!' },
+            { speaker: 'Teacher Carlos', text: 'A SCHOOL is a place where students learn. Can you spell it? S-C-H-O-O-L!' },
+        ]
+    },
+    {
+        id: 1, title: 'Library Search',
+        description: 'Find the Library and return a lost book',
+        objective: 'Navigate to the Library',
+        targetBuilding: 'Library',
+        targetVocab: 'library',
+        reward: 150,
+        dialogues: [
+            { speaker: 'Guide María', text: 'A student lost a book! We need to return it to the LIBRARY.' },
+            { speaker: 'Guide María', text: 'A LIBRARY is a place with many books. You can read and borrow books there.' },
+        ],
+        completionDialogue: [
+            { speaker: 'Librarian Ana', text: 'Thank you for returning the book to the Library!' },
+            { speaker: 'Librarian Ana', text: 'The LIBRARY has thousands of books. L-I-B-R-A-R-Y. Come visit anytime!' },
+        ]
+    },
+    {
+        id: 2, title: 'Healthy City',
+        description: 'Find the Hospital',
+        objective: 'Navigate to the Hospital',
+        targetBuilding: 'Hospital',
+        targetVocab: 'hospital',
+        reward: 150,
+        dialogues: [
+            { speaker: 'Guide María', text: 'Someone needs help! Let\'s find the HOSPITAL.' },
+            { speaker: 'Guide María', text: 'A HOSPITAL is where doctors and nurses help sick people get better.' },
+        ],
+        completionDialogue: [
+            { speaker: 'Doctor Rivera', text: 'Welcome to the Hospital! We help people stay healthy here.' },
+            { speaker: 'Doctor Rivera', text: 'H-O-S-P-I-T-A-L. Remember, if you feel sick, go to the hospital!' },
+        ]
+    },
+    {
+        id: 3, title: 'Shopping Time',
+        description: 'Visit the Supermarket in the Shopping District',
+        objective: 'Find the Supermarket',
+        targetBuilding: 'Supermarket',
+        targetVocab: 'supermarket',
+        reward: 150,
+        dialogues: [
+            { speaker: 'Guide María', text: 'Time to go shopping! Let\'s find the SUPERMARKET.' },
+            { speaker: 'Guide María', text: 'A SUPERMARKET is a big store where you can buy food and supplies.' },
+        ],
+        completionDialogue: [
+            { speaker: 'Manager Pedro', text: 'Welcome to our Supermarket! We have everything you need!' },
+            { speaker: 'Manager Pedro', text: 'S-U-P-E-R-M-A-R-K-E-T. It\'s a big word for a big store!' },
+        ]
+    },
+    {
+        id: 4, title: 'A Day at the Park',
+        description: 'Find the Park and complete outdoor challenges',
+        objective: 'Navigate to the Park',
+        targetBuilding: 'Park Gazebo',
+        targetVocab: 'park',
+        reward: 200,
+        dialogues: [
+            { speaker: 'Guide María', text: 'What a beautiful day! Let\'s visit the PARK.' },
+            { speaker: 'Guide María', text: 'A PARK is an outdoor area where people play, exercise, and relax.' },
+        ],
+        completionDialogue: [
+            { speaker: 'Ranger Luis', text: 'Welcome to the Park! Enjoy the fresh air and nature!' },
+            { speaker: 'Ranger Luis', text: 'P-A-R-K. Parks are important for our city. They give us green space!' },
+        ]
+    },
+    {
+        id: 5, title: 'Museum Explorer',
+        description: 'Find the Museum and solve clues',
+        objective: 'Navigate to the Museum',
+        targetBuilding: 'Museum',
+        targetVocab: 'museum',
+        reward: 200,
+        dialogues: [
+            { speaker: 'Guide María', text: 'Let\'s explore history! Find the MUSEUM in the Museum District.' },
+            { speaker: 'Guide María', text: 'A MUSEUM displays art, history, and important artifacts from our culture.' },
+        ],
+        completionDialogue: [
+            { speaker: 'Curator Sofía', text: 'Welcome to the Museum! Santo Domingo has a rich history!' },
+            { speaker: 'Curator Sofía', text: 'M-U-S-E-U-M. Museums help us learn about the past!' },
+        ]
+    },
+    {
+        id: 6, title: 'Emergency Route',
+        description: 'Visit the Police Station and Fire Station',
+        objective: 'Find the Police Station',
+        targetBuilding: 'Police Station',
+        targetVocab: 'police_station',
+        reward: 200,
+        dialogues: [
+            { speaker: 'Guide María', text: 'Let\'s learn about emergency services! Find the POLICE STATION.' },
+            { speaker: 'Guide María', text: 'The POLICE STATION is where police officers work to keep us safe.' },
+        ],
+        completionDialogue: [
+            { speaker: 'Officer Díaz', text: 'Welcome to the Police Station! We keep the city safe.' },
+            { speaker: 'Officer Díaz', text: 'Don\'t forget to also visit the FIRE STATION nearby!' },
+        ]
+    },
+    {
+        id: 7, title: 'Dinner Downtown',
+        description: 'Find the Restaurant in Downtown',
+        objective: 'Navigate to the Restaurant',
+        targetBuilding: 'Restaurant',
+        targetVocab: 'restaurant',
+        reward: 200,
+        dialogues: [
+            { speaker: 'Guide María', text: 'It\'s dinner time! Let\'s find a RESTAURANT downtown.' },
+            { speaker: 'Guide María', text: 'A RESTAURANT is a place where people sit down and enjoy meals.' },
+        ],
+        completionDialogue: [
+            { speaker: 'Chef Miguel', text: 'Welcome to our Restaurant! Would you like some Dominican food?' },
+            { speaker: 'Chef Miguel', text: 'R-E-S-T-A-U-R-A-N-T. Our city has the best restaurants!' },
+        ]
+    },
+    {
+        id: 8, title: 'Travel Around the City',
+        description: 'Visit the Hotel, Bus Station, and Airport',
+        objective: 'Find the Hotel',
+        targetBuilding: 'Grand Hotel',
+        targetVocab: 'hotel',
+        reward: 250,
+        dialogues: [
+            { speaker: 'Guide María', text: 'Let\'s explore transportation! Find the HOTEL in the Hotel District.' },
+            { speaker: 'Guide María', text: 'A HOTEL is where travelers stay when they visit a city.' },
+        ],
+        completionDialogue: [
+            { speaker: 'Concierge Rosa', text: 'Welcome to the Grand Hotel! Enjoy your stay in Santo Domingo!' },
+            { speaker: 'Concierge Rosa', text: 'H-O-T-E-L. Also visit the Bus Station and Airport nearby!' },
+        ]
+    },
+    {
+        id: 9, title: 'Grand City Challenge',
+        description: 'Complete the city-wide scavenger hunt!',
+        objective: 'Answer vocabulary questions about all learned places',
+        targetBuilding: null,
+        targetVocab: null,
+        reward: 500,
+        dialogues: [
+            { speaker: 'Guide María', text: 'Amazing! You\'ve explored so much of Santo Domingo!' },
+            { speaker: 'Guide María', text: 'For your final challenge, answer questions about all the places you\'ve learned!' },
+        ],
+        completionDialogue: [
+            { speaker: 'Mayor Santos', text: 'Congratulations! You are now a Santo Domingo City Explorer!' },
+            { speaker: 'Mayor Santos', text: 'You\'ve learned so many English words about city places. Well done!' },
+        ]
+    }
+];
+
+// ===== NPC Definitions =====
+class NPC {
+    constructor(name, x, z, role, dialogues, schedule, color) {
+        this.name = name;
+        this.x = x; this.y = 0; this.z = z;
+        this.startX = x; this.startZ = z;
+        this.role = role;
+        this.dialogues = dialogues;
+        this.schedule = schedule || 'wander';
+        this.color = color || [0.7+random()*0.3, 0.5+random()*0.3, 0.4+random()*0.3];
+        this.rotation = random() * TAU;
+        this.speed = 1 + random() * 2;
+        this.wanderTarget = null;
+        this.wanderTimer = random() * 5;
+        this.interactable = dialogues && dialogues.length > 0;
+        this.animPhase = random() * TAU;
+        this.headColor = [0.85, 0.7, 0.55];
+        this.bodyHeight = 1.4 + random() * 0.4;
+    }
+
+    update(dt) {
+        this.animPhase += dt * 3;
+        this.wanderTimer -= dt;
+
+        if (this.wanderTimer <= 0) {
+            const range = 25;
+            this.wanderTarget = new Vec3(
+                this.startX + (random()-0.5) * range,
+                0,
+                this.startZ + (random()-0.5) * range
+            );
+            this.wanderTimer = 3 + random() * 5;
+        }
+
+        if (this.wanderTarget) {
+            const dx = this.wanderTarget.x - this.x;
+            const dz = this.wanderTarget.z - this.z;
+            const dist = sqrt(dx*dx + dz*dz);
+
+            if (dist > 1) {
+                const targetRot = Math.atan2(dx, dz);
+                let diff = targetRot - this.rotation;
+                while (diff > PI) diff -= TAU;
+                while (diff < -PI) diff += TAU;
+                this.rotation += diff * dt * 3;
+
+                this.x += sin(this.rotation) * this.speed * dt;
+                this.z += cos(this.rotation) * this.speed * dt;
+            } else {
+                this.wanderTarget = null;
+            }
+        }
+    }
+}
+
+// ===== Collectible =====
+class Collectible {
+    constructor(x, y, z, type, value, vocabKey) {
+        this.x = x; this.y = y; this.z = z;
+        this.type = type;
+        this.value = value;
+        this.vocabKey = vocabKey;
+        this.collected = false;
+        this.bobPhase = random() * TAU;
+        this.rotPhase = random() * TAU;
+    }
+}
+
+// ===== Obstacle (friendly enemies) =====
+class Obstacle {
+    constructor(x, z, type) {
+        this.x = x; this.y = 0; this.z = z;
+        this.type = type; // monkey, seagull, dog, raccoon, pigeon, trafficcone
+        this.rotation = random() * TAU;
+        this.speed = 1 + random() * 2;
+        this.phase = random() * TAU;
+        this.startX = x; this.startZ = z;
+        this.patrolRadius = 5 + random() * 10;
+        this.active = true;
+    }
+
+    update(dt) {
+        this.phase += dt;
+        switch(this.type) {
+            case 'monkey':
+                this.x = this.startX + cos(this.phase * 1.5) * this.patrolRadius;
+                this.z = this.startZ + sin(this.phase * 1.5) * this.patrolRadius;
+                this.y = abs(sin(this.phase * 3)) * 2;
+                break;
+            case 'seagull':
+                this.x = this.startX + cos(this.phase * 0.8) * this.patrolRadius * 2;
+                this.z = this.startZ + sin(this.phase * 0.8) * this.patrolRadius * 2;
+                this.y = 3 + sin(this.phase * 2) * 1.5;
+                break;
+            case 'dog':
+                this.x = this.startX + cos(this.phase * 0.5) * this.patrolRadius;
+                this.z = this.startZ + sin(this.phase * 0.7) * this.patrolRadius;
+                break;
+            case 'raccoon':
+                if (sin(this.phase * 0.3) > 0) {
+                    this.x = this.startX + cos(this.phase * 2) * 3;
+                    this.z = this.startZ + sin(this.phase * 2) * 3;
+                }
+                break;
+            case 'pigeon':
+                this.x = this.startX + cos(this.phase) * 4;
+                this.z = this.startZ + sin(this.phase * 1.3) * 4;
+                this.y = 0.5 + abs(sin(this.phase * 5)) * 0.5;
+                break;
+            case 'trafficcone':
+                this.y = sin(this.phase * 2) * 0.3;
+                this.rotation += dt * 2;
+                break;
+        }
+        this.rotation = Math.atan2(
+            cos(this.phase * (this.type === 'seagull' ? 0.8 : 1.5)),
+            sin(this.phase * (this.type === 'seagull' ? 0.8 : 1.5))
+        );
+    }
+}
+
+// ===== Moving Platform =====
+class MovingPlatform {
+    constructor(x, y, z, dx, dy, dz, speed, w, h, d) {
+        this.startPos = new Vec3(x,y,z);
+        this.endPos = new Vec3(x+dx, y+dy, z+dz);
+        this.speed = speed;
+        this.w = w; this.h = h; this.d = d;
+        this.phase = 0;
+        this.pos = new Vec3(x,y,z);
+    }
+
+    update(dt) {
+        this.phase += dt * this.speed;
+        const t = (sin(this.phase) + 1) * 0.5;
+        this.pos = this.startPos.lerp(this.endPos, t);
+    }
+}
+
+// ===== Interactive Prop =====
+class InteractiveProp {
+    constructor(x, z, type, label) {
+        this.x = x; this.y = 0; this.z = z;
+        this.type = type;
+        this.label = label;
+        this.interacted = false;
+        this.animPhase = random() * TAU;
+    }
+}
+
+// ===== GAME ENGINE =====
+class Game {
+    constructor() {
+        this.renderer = new Renderer();
+        this.gl = this.renderer.gl;
+        this.input = new InputSystem();
+        this.audio = new AudioSystem();
+        this.state = new GameState();
+
+        // Player state
+        this.player = {
+            pos: new Vec3(0, 1.5, 50),
+            vel: new Vec3(0, 0, 0),
+            rotation: 0,
+            targetRotation: 0,
+            grounded: true,
+            speed: 0,
+            maxSpeed: 15,
+            runSpeed: 22,
+            jumpForce: 12,
+            animPhase: 0,
+            footstepTimer: 0,
+        };
+
+        // Camera
+        this.camera = {
+            pos: new Vec3(0, 8, 60),
+            target: new Vec3(0, 3, 50),
+            rotation: 0,
+            pitch: 0.3,
+            distance: 12,
+            smoothPos: new Vec3(0, 8, 60),
+        };
+
+        // Time
+        this.time = 0;
+        this.dayTime = 0.3; // 0-1 day cycle
+        this.weatherIntensity = 0;
+
+        // Game objects
+        this.npcs = [];
+        this.collectibles = [];
+        this.obstacles = [];
+        this.movingPlatforms = [];
+        this.props = [];
+
+        // Meshes
+        this.meshes = {};
+
+        // State flags
+        this.paused = false;
+        this.inDialogue = false;
+        this.dialogueQueue = [];
+        this.dialogueIndex = 0;
+        this.inMinigame = false;
+        this.nearestInteractable = null;
+        this.gameStarted = false;
+
+        // Minimap
+        this.minimapCtx = document.getElementById('minimapCanvas').getContext('2d');
+    }
+
+    async init() {
+        document.getElementById('loadingScreen').classList.add('active');
+        const bar = document.getElementById('loadingBar');
+
+        // Phase 1: Build city mesh
+        const tips = [
+            'Tip: Explore every corner of the city to find hidden collectibles!',
+            'Tip: Talk to NPCs to learn new vocabulary words!',
+            'Tip: Press TAB to see all the words you\'ve learned!',
+            'Tip: The compass at the top shows which direction you\'re facing!',
+            'Tip: Jump on rooftops to find secret items!',
+        ];
+        document.getElementById('loadingTip').textContent = tips[floor(random()*tips.length)];
+
+        await this.sleep(100);
+        bar.style.width = '10%';
+
+        this.buildCityMesh();
+        bar.style.width = '30%';
+        await this.sleep(100);
+
+        this.buildCharacterMesh();
+        bar.style.width = '40%';
+        await this.sleep(100);
+
+        this.buildWaterMesh();
+        bar.style.width = '50%';
+        await this.sleep(100);
+
+        this.spawnNPCs();
+        bar.style.width = '60%';
+        await this.sleep(100);
+
+        this.spawnCollectibles();
+        bar.style.width = '70%';
+        await this.sleep(100);
+
+        this.spawnObstacles();
+        this.spawnPlatforms();
+        this.spawnProps();
+        bar.style.width = '85%';
+        await this.sleep(100);
+
+        this.buildDynamicMeshes();
+        bar.style.width = '95%';
+        await this.sleep(100);
+
+        bar.style.width = '100%';
+        await this.sleep(300);
+
+        document.getElementById('loadingScreen').classList.remove('active');
+        document.getElementById('hud').classList.add('active');
+        document.getElementById('controlsHelp').classList.add('active');
+
+        this.audio.init();
+        this.audio.startAmbient();
+
+        this.gameStarted = true;
+
+        // Start first mission dialogue
+        this.startMissionDialogue(0);
+
+        this.loop();
+    }
+
+    sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    buildCityMesh() {
+        const mb = new MeshBuilder();
+
+        // Ground plane (large)
+        for (let gx = -5; gx < 5; gx++) {
+            for (let gz = -5; gz < 5; gz++) {
+                const isGrass = random() > 0.3;
+                const color = isGrass ?
+                    [0.25+random()*0.1, 0.55+random()*0.1, 0.2+random()*0.05] :
+                    [0.45+random()*0.05, 0.42+random()*0.05, 0.38+random()*0.05];
+                mb.addPlane(gx*80, 0, gz*80, 80, 80, color[0], color[1], color[2]);
+            }
+        }
+
+        // Roads
+        const roads = [
+            // Main E-W roads
+            {x:0, z:0, w:500, d:8},
+            {x:0, z:50, w:500, d:8},
+            {x:0, z:100, w:500, d:8},
+            {x:0, z:-50, w:500, d:6},
+            {x:0, z:-100, w:400, d:6},
+            // Main N-S roads
+            {x:0, z:0, w:8, d:400},
+            {x:50, z:0, w:8, d:400},
+            {x:100, z:0, w:8, d:400},
+            {x:150, z:0, w:8, d:350},
+            {x:200, z:0, w:8, d:300},
+            {x:-50, z:0, w:6, d:300},
+            {x:-100, z:0, w:6, d:300},
+            {x:-150, z:0, w:6, d:200},
+        ];
+
+        for (const road of roads) {
+            mb.addBox(road.x, 0.05, road.z, road.w, 0.1, road.d, 0.25, 0.25, 0.28);
+            // Road markings (center line)
+            if (road.w > road.d) {
+                for (let x = road.x - road.w/2; x < road.x + road.w/2; x += 8) {
+                    mb.addBox(x, 0.12, road.z, 3, 0.02, 0.3, 0.9, 0.9, 0.2);
+                }
+            } else {
+                for (let z = road.z - road.d/2; z < road.z + road.d/2; z += 8) {
+                    mb.addBox(road.x, 0.12, z, 0.3, 0.02, 3, 0.9, 0.9, 0.2);
+                }
+            }
+        }
+
+        // Sidewalks along roads
+        for (const road of roads) {
+            if (road.w > road.d) {
+                mb.addBox(road.x, 0.15, road.z - road.d/2 - 2, road.w, 0.3, 3, 0.6, 0.58, 0.55);
+                mb.addBox(road.x, 0.15, road.z + road.d/2 + 2, road.w, 0.3, 3, 0.6, 0.58, 0.55);
+            } else {
+                mb.addBox(road.x - road.d/2 - 2, 0.15, road.z, 3, 0.3, road.d, 0.6, 0.58, 0.55);
+                mb.addBox(road.x + road.d/2 + 2, 0.15, road.z, 3, 0.3, road.d, 0.6, 0.58, 0.55);
+            }
+        }
+
+        // Buildings
+        for (const b of BUILDINGS) {
+            // Main building body
+            mb.addBox(b.x, b.h/2, b.z, b.w, b.h, b.d, b.color[0], b.color[1], b.color[2]);
+
+            // Roof
+            mb.addBox(b.x, b.h + 0.5, b.z, b.w+1, 1, b.d+1, b.roofColor[0], b.roofColor[1], b.roofColor[2]);
+
+            // Windows
+            const windowRows = floor(b.h / 4);
+            const windowCols = floor(b.w / 4);
+            for (let row = 0; row < windowRows; row++) {
+                for (let col = 0; col < windowCols; col++) {
+                    const wy = 3 + row * 4;
+                    const wx = b.x - b.w/2 + 2 + col * 4;
+                    if (wy < b.h - 1) {
+                        // Front windows
+                        mb.addBox(wx, wy, b.z + b.d/2 + 0.05, 1.5, 2, 0.1, 0.6, 0.8, 0.95);
+                        // Window frame
+                        mb.addBox(wx, wy, b.z + b.d/2 + 0.08, 1.8, 2.3, 0.05, 0.3, 0.25, 0.2);
+                        // Back windows
+                        mb.addBox(wx, wy, b.z - b.d/2 - 0.05, 1.5, 2, 0.1, 0.6, 0.8, 0.95);
+                    }
+                }
+            }
+
+            // Door
+            mb.addBox(b.x, 1.5, b.z + b.d/2 + 0.05, 2.5, 3, 0.1, 0.4, 0.25, 0.15);
+            // Door frame
+            mb.addBox(b.x, 1.75, b.z + b.d/2 + 0.08, 3, 3.5, 0.05, 0.3, 0.2, 0.12);
+
+            // Building sign (if interactable)
+            if (b.interactable) {
+                mb.addBox(b.x, b.h * 0.7, b.z + b.d/2 + 0.2, b.w * 0.6, 1.5, 0.2, 0.9, 0.85, 0.7);
+            }
+
+            // Foundation
+            mb.addBox(b.x, 0.25, b.z, b.w + 0.5, 0.5, b.d + 0.5, b.color[0]*0.7, b.color[1]*0.7, b.color[2]*0.7);
+        }
+
+        // Malecón wall
+        for (let x = -100; x < 100; x += 3) {
+            mb.addBox(x, 1.5, -130, 2.8, 3, 1.5, 0.65, 0.6, 0.55);
+            if (x % 12 === 0) {
+                // Lamp post on malecon
+                mb.addCylinder(x, 0, -131, 0.15, 5, 8, 0.2, 0.2, 0.22);
+                mb.addSphere(x, 5.5, -131, 0.5, 8, 6, 0.95, 0.95, 0.8);
+            }
+        }
+
+        // Beach area
+        mb.addPlane(-50, 0.1, -180, 160, 60, 0.9, 0.85, 0.65); // Sand
+
+        // Park features
+        // Trees in park
+        for (let i = 0; i < 30; i++) {
+            const tx = -80 + (random()-0.5) * 80;
+            const tz = -50 + (random()-0.5) * 60;
+            this.addTree(mb, tx, tz, 3 + random()*3);
+        }
+
+        // Trees elsewhere in city
+        for (let i = 0; i < 100; i++) {
+            const tx = (random()-0.5) * 500;
+            const tz = (random()-0.5) * 400;
+            // Don't place trees inside buildings
+            let blocked = false;
+            for (const b of BUILDINGS) {
+                if (abs(tx-b.x) < b.w/2+3 && abs(tz-b.z) < b.d/2+3) { blocked = true; break; }
+            }
+            if (!blocked) {
+                this.addTree(mb, tx, tz, 2 + random()*4);
+            }
+        }
+
+        // Park benches
+        for (let i = 0; i < 10; i++) {
+            const bx = -80 + (random()-0.5) * 60;
+            const bz = -50 + (random()-0.5) * 40;
+            mb.addBox(bx, 0.5, bz, 2, 0.15, 0.8, 0.45, 0.3, 0.15);
+            mb.addBox(bx, 0.25, bz-0.35, 2, 0.5, 0.1, 0.3, 0.2, 0.1);
+            mb.addBox(bx, 0.25, bz+0.35, 2, 0.5, 0.1, 0.3, 0.2, 0.1);
+            mb.addBox(bx, 0.7, bz-0.35, 2, 0.8, 0.08, 0.45, 0.3, 0.15);
+        }
+
+        // Fountains
+        this.addFountain(mb, -80, -50); // Park
+        this.addFountain(mb, 0, 0); // Colonial center
+        this.addFountain(mb, 150, 0); // Downtown
+
+        // Street lamps throughout city
+        for (let i = 0; i < 80; i++) {
+            const lx = (random()-0.5) * 450;
+            const lz = (random()-0.5) * 380;
+            mb.addCylinder(lx, 0, lz, 0.12, 4.5, 6, 0.3, 0.3, 0.32);
+            mb.addSphere(lx, 5, lz, 0.4, 6, 4, 0.95, 0.92, 0.7);
+        }
+
+        // Traffic lights
+        const trafficPositions = [[0,0],[50,0],[100,0],[0,50],[50,50],[100,50],[150,0]];
+        for (const [tx,tz] of trafficPositions) {
+            mb.addCylinder(tx+4, 0, tz+4, 0.1, 4, 6, 0.2, 0.2, 0.2);
+            mb.addBox(tx+4, 4, tz+4, 0.6, 1.5, 0.4, 0.15, 0.15, 0.15);
+            mb.addSphere(tx+4, 4.3, tz+4.25, 0.15, 6, 4, 0.9, 0.2, 0.2); // Red
+            mb.addSphere(tx+4, 4, tz+4.25, 0.15, 6, 4, 0.9, 0.9, 0.2); // Yellow
+            mb.addSphere(tx+4, 3.7, tz+4.25, 0.15, 6, 4, 0.2, 0.9, 0.2); // Green
+        }
+
+        // Airport runway
+        mb.addBox(250, 0.05, -80, 60, 0.1, 8, 0.2, 0.2, 0.22);
+        // Runway markings
+        for (let x = 225; x < 275; x += 5) {
+            mb.addBox(x, 0.08, -80, 2, 0.02, 0.5, 0.9, 0.9, 0.9);
+        }
+        // Airplane (decorative)
+        mb.addBox(260, 4, -80, 12, 3, 4, 0.9, 0.9, 0.92);
+        mb.addBox(260, 5.5, -80, 3, 1, 18, 0.85, 0.85, 0.88); // Wings
+        mb.addBox(254, 6, -80, 4, 4, 1, 0.88, 0.88, 0.9); // Tail
+
+        // Decorative boats at waterfront
+        for (let i = 0; i < 5; i++) {
+            const bx = -40 + i * 20;
+            const bz = -145;
+            mb.addBox(bx, 0.5, bz, 4, 1.5, 2, 0.5, 0.3, 0.15);
+            mb.addBox(bx, 1.5, bz, 3, 0.5, 1.5, 0.45, 0.28, 0.12);
+            // Mast
+            mb.addCylinder(bx, 1, bz, 0.08, 3, 6, 0.6, 0.5, 0.35);
+        }
+
+        this.meshes.city = mb.build(this.gl);
+    }
+
+    addTree(mb, x, z, height) {
+        // Trunk
+        mb.addCylinder(x, 0, z, 0.3, height * 0.6, 6, 0.45, 0.3, 0.15);
+        // Canopy (layered spheres for volume)
+        const canopyY = height * 0.6;
+        const r = height * 0.4;
+        const g1 = 0.2 + random()*0.15, g2 = 0.5 + random()*0.2, g3 = 0.15 + random()*0.1;
+        mb.addSphere(x, canopyY + r*0.5, z, r, 8, 6, g1, g2, g3);
+        mb.addSphere(x + r*0.3, canopyY + r*0.3, z + r*0.2, r*0.7, 6, 5, g1*0.95, g2*1.05, g3*0.95);
+        mb.addSphere(x - r*0.2, canopyY + r*0.4, z - r*0.3, r*0.65, 6, 5, g1*1.05, g2*0.95, g3*1.05);
+    }
+
+    addFountain(mb, x, z) {
+        // Base
+        mb.addCylinder(x, 0, z, 3, 0.8, 12, 0.6, 0.6, 0.62);
+        // Inner basin
+        mb.addCylinder(x, 0.3, z, 2.5, 0.6, 12, 0.25, 0.45, 0.65);
+        // Center pillar
+        mb.addCylinder(x, 0, z, 0.3, 2.5, 8, 0.65, 0.63, 0.6);
+        // Top bowl
+        mb.addCylinder(x, 2.2, z, 1, 0.4, 10, 0.6, 0.6, 0.62);
+    }
+
+    buildCharacterMesh() {
+        // Player character mesh
+        const mb = new MeshBuilder();
+
+        // Body (torso)
+        mb.addBox(0, 0.9, 0, 0.8, 1.0, 0.5, 0.2, 0.5, 0.8); // Blue shirt
+
+        // Head
+        mb.addSphere(0, 1.85, 0, 0.3, 8, 6, 0.85, 0.72, 0.58);
+
+        // Hair
+        mb.addSphere(0, 2.0, -0.05, 0.28, 8, 4, 0.15, 0.1, 0.05);
+
+        // Eyes (small white spheres)
+        mb.addSphere(0.1, 1.9, 0.25, 0.06, 4, 3, 0.95, 0.95, 0.95);
+        mb.addSphere(-0.1, 1.9, 0.25, 0.06, 4, 3, 0.95, 0.95, 0.95);
+        // Pupils
+        mb.addSphere(0.1, 1.9, 0.3, 0.03, 4, 3, 0.1, 0.1, 0.1);
+        mb.addSphere(-0.1, 1.9, 0.3, 0.03, 4, 3, 0.1, 0.1, 0.1);
+
+        // Legs
+        mb.addBox(-0.2, 0.0, 0, 0.3, 0.8, 0.35, 0.3, 0.3, 0.5); // Pants
+        mb.addBox(0.2, 0.0, 0, 0.3, 0.8, 0.35, 0.3, 0.3, 0.5);
+
+        // Shoes
+        mb.addBox(-0.2, -0.35, 0.05, 0.3, 0.15, 0.4, 0.3, 0.2, 0.1);
+        mb.addBox(0.2, -0.35, 0.05, 0.3, 0.15, 0.4, 0.3, 0.2, 0.1);
+
+        // Arms
+        mb.addBox(-0.55, 0.8, 0, 0.25, 0.8, 0.25, 0.85, 0.72, 0.58);
+        mb.addBox(0.55, 0.8, 0, 0.25, 0.8, 0.25, 0.85, 0.72, 0.58);
+
+        // Backpack
+        mb.addBox(0, 0.9, -0.35, 0.6, 0.7, 0.3, 0.6, 0.15, 0.1);
+
+        this.meshes.player = mb.build(this.gl);
+    }
+
+    buildWaterMesh() {
+        const mb = new MeshBuilder();
+        // Ocean behind malecon
+        for (let x = -5; x < 5; x++) {
+            for (let z = -5; z < -1; z++) {
+                mb.addPlane(x*80, -0.5, z*80 - 100, 80, 80, 0.1, 0.35, 0.6);
+            }
+        }
+        this.meshes.water = mb.build(this.gl);
+    }
+
+    buildDynamicMeshes() {
+        // NPC mesh (generic humanoid)
+        const mb = new MeshBuilder();
+        mb.addBox(0, 0.9, 0, 0.7, 0.9, 0.4, 1, 1, 1); // Body (color via uniform)
+        mb.addSphere(0, 1.7, 0, 0.25, 6, 5, 0.85, 0.72, 0.58); // Head
+        mb.addBox(-0.18, 0.05, 0, 0.25, 0.7, 0.3, 0.35, 0.3, 0.5); // Legs
+        mb.addBox(0.18, 0.05, 0, 0.25, 0.7, 0.3, 0.35, 0.3, 0.5);
+        mb.addBox(-0.48, 0.8, 0, 0.22, 0.7, 0.22, 0.85, 0.72, 0.58); // Arms
+        mb.addBox(0.48, 0.8, 0, 0.22, 0.7, 0.22, 0.85, 0.72, 0.58);
+        this.meshes.npc = mb.build(this.gl);
+
+        // Collectible (star/coin)
+        const cb = new MeshBuilder();
+        cb.addSphere(0, 0, 0, 0.4, 8, 6, 1, 0.85, 0.2);
+        // Inner glow
+        cb.addSphere(0, 0, 0, 0.25, 6, 4, 1, 1, 0.6);
+        this.meshes.collectible = cb.build(this.gl);
+
+        // Obstacle meshes (simple shapes representing animals)
+        const ob = new MeshBuilder();
+        // Body
+        ob.addSphere(0, 0.5, 0, 0.4, 6, 5, 0.5, 0.35, 0.2);
+        // Head
+        ob.addSphere(0, 0.8, 0.3, 0.25, 6, 4, 0.5, 0.35, 0.2);
+        ob.addSphere(0, 0.85, 0.45, 0.08, 4, 3, 0.95, 0.3, 0.2); // Nose
+        // Eyes
+        ob.addSphere(0.08, 0.88, 0.48, 0.04, 4, 3, 0.95, 0.95, 0.95);
+        ob.addSphere(-0.08, 0.88, 0.48, 0.04, 4, 3, 0.95, 0.95, 0.95);
+        this.meshes.obstacle = ob.build(this.gl);
+
+        // Platform
+        const pb = new MeshBuilder();
+        pb.addBox(0, 0, 0, 4, 0.5, 4, 0.5, 0.4, 0.3);
+        pb.addBox(0, 0.3, 0, 3.5, 0.1, 3.5, 0.6, 0.5, 0.35);
+        this.meshes.platform = pb.build(this.gl);
+
+        // Skybox (large inverted box)
+        const sb = new MeshBuilder();
+        // We'll render sky via clear color + gradient, no mesh needed
+        this.meshes.sky = null;
+    }
+
+    spawnNPCs() {
+        const roles = ['Student', 'Tourist', 'Shopkeeper', 'Teacher', 'Doctor', 'Police Officer',
+            'Bus Driver', 'Street Performer', 'Vendor', 'Jogger', 'Parent', 'Businessman',
+            'Artist', 'Musician', 'Guard', 'Guide', 'Chef', 'Librarian', 'Nurse', 'Worker'];
+
+        const npcDialogues = {
+            'Student': ['Hello! I\'m going to the SCHOOL today.', 'Do you know where the LIBRARY is?'],
+            'Tourist': ['This city is beautiful!', 'Can you tell me where the MUSEUM is?', 'I\'m staying at a HOTEL nearby.'],
+            'Shopkeeper': ['Welcome to my shop!', 'The SUPERMARKET is down the street.'],
+            'Teacher': ['Learning is an adventure!', 'The SCHOOL is a wonderful place!'],
+            'Doctor': ['Stay healthy!', 'Visit the HOSPITAL if you need help.'],
+            'Police Officer': ['Stay safe!', 'The POLICE STATION is nearby.'],
+            'Bus Driver': ['The BUS STATION is right over there!', 'I drive all around the city!'],
+            'Street Performer': ['Enjoy the show!', 'The PARK is a great place to perform!'],
+            'Vendor': ['Fresh food! Come see!', 'Visit the SUPERMARKET for more!'],
+            'Guide': ['Welcome to Santo Domingo!', 'There\'s so much to explore!'],
+        };
+
+        // Quest NPCs (25)
+        const questNPCDefs = [
+            { name: 'Guide María', x: 0, z: 45, role: 'Guide', dialogues: ['Welcome! Ready for an adventure?'] },
+            { name: 'Teacher Carlos', x: -20, z: 38, role: 'Teacher', dialogues: ['Welcome to the School!'] },
+            { name: 'Librarian Ana', x: 20, z: -18, role: 'Librarian', dialogues: ['The Library is full of books!'] },
+            { name: 'Doctor Rivera', x: -60, z: 82, role: 'Doctor', dialogues: ['Stay healthy! Visit the Hospital!'] },
+            { name: 'Manager Pedro', x: 90, z: 82, role: 'Shopkeeper', dialogues: ['Welcome to the Supermarket!'] },
+            { name: 'Ranger Luis', x: -80, z: -42, role: 'Guide', dialogues: ['Welcome to the Park!'] },
+            { name: 'Curator Sofía', x: 50, z: -72, role: 'Guide', dialogues: ['Welcome to the Museum!'] },
+            { name: 'Officer Díaz', x: 60, z: 42, role: 'Police Officer', dialogues: ['We keep the city safe!'] },
+            { name: 'Chef Miguel', x: 160, z: 28, role: 'Chef', dialogues: ['Try our delicious food!'] },
+            { name: 'Concierge Rosa', x: 200, z: 72, role: 'Guide', dialogues: ['Enjoy your stay!'] },
+            { name: 'Mayor Santos', x: 0, z: 5, role: 'Guide', dialogues: ['Welcome to our wonderful city!'] },
+            { name: 'Fire Chief Gómez', x: 80, z: 42, role: 'Guide', dialogues: ['We respond to emergencies!'] },
+            { name: 'Pilot Ramón', x: 250, z: -42, role: 'Guide', dialogues: ['The Airport is very busy!'] },
+            { name: 'Bus Driver Manuel', x: 220, z: 52, role: 'Bus Driver', dialogues: ['All aboard!'] },
+            { name: 'Nurse Carmen', x: -55, z: 82, role: 'Nurse', dialogues: ['How are you feeling?'] },
+            { name: 'Banker Tomás', x: 130, z: -18, role: 'Businessman', dialogues: ['Welcome to the Bank!'] },
+            { name: 'Pharmacist Elena', x: 120, z: 22, role: 'Doctor', dialogues: ['Need any medicine?'] },
+            { name: 'Bookseller Juan', x: 115, z: 118, role: 'Shopkeeper', dialogues: ['Books are wonderful!'] },
+            { name: 'Gym Trainer Paula', x: 85, z: 122, role: 'Guide', dialogues: ['Exercise is important!'] },
+            { name: 'Baker Diego', x: 40, z: -28, role: 'Chef', dialogues: ['Fresh bread every morning!'] },
+            { name: 'Mail Carrier Lucía', x: -10, z: -42, role: 'Worker', dialogues: ['Letters for everyone!'] },
+            { name: 'Fisherman Pedro', x: -30, z: -135, role: 'Worker', dialogues: ['The Beach is beautiful!'] },
+            { name: 'Lifeguard Marta', x: -50, z: -175, role: 'Guide', dialogues: ['Swim safely!'] },
+            { name: 'Professor García', x: -100, z: 122, role: 'Teacher', dialogues: ['Education is key!'] },
+            { name: 'Tour Guide Alex', x: 5, z: 15, role: 'Guide', dialogues: ['Let me show you around!'] },
+        ];
+
+        for (const def of questNPCDefs) {
+            const npc = new NPC(def.name, def.x, def.z, def.role, def.dialogues, 'quest',
+                [0.3+random()*0.5, 0.3+random()*0.5, 0.3+random()*0.5]);
+            this.npcs.push(npc);
+        }
+
+        // Ambient NPCs (100+)
+        for (let i = 0; i < 110; i++) {
+            const distKeys = Object.keys(DISTRICTS);
+            const district = DISTRICTS[distKeys[floor(random()*distKeys.length)]];
+            const x = district.center.x + (random()-0.5) * district.radius * 1.5;
+            const z = district.center.z + (random()-0.5) * district.radius * 1.5;
+            const role = roles[floor(random()*roles.length)];
+            const dialogueSet = npcDialogues[role] || ['Hello!', 'Nice day, isn\'t it?'];
+            const npc = new NPC(
+                role + ' ' + (i+1), x, z, role,
+                [dialogueSet[floor(random()*dialogueSet.length)]],
+                'wander',
+                [0.3+random()*0.6, 0.3+random()*0.5, 0.3+random()*0.5]
+            );
+            this.npcs.push(npc);
+        }
+    }
+
+    spawnCollectibles() {
+        // Vocabulary stars near each important building
+        for (const b of BUILDINGS) {
+            if (b.vocabKey) {
+                this.collectibles.push(new Collectible(
+                    b.x + (random()-0.5)*10, 2, b.z + (random()-0.5)*10,
+                    'vocab_star', 25, b.vocabKey
+                ));
+            }
+        }
+
+        // General collectibles scattered around city
+        for (let i = 0; i < 80; i++) {
+            const x = (random()-0.5) * 450;
+            const z = (random()-0.5) * 350;
+            this.collectibles.push(new Collectible(x, 1.5 + random()*3, z, 'coin', 10, null));
+        }
+
+        // Rooftop collectibles
+        for (const b of BUILDINGS) {
+            if (random() > 0.5) {
+                this.collectibles.push(new Collectible(
+                    b.x, b.h + 2, b.z, 'star', 50, null
+                ));
+            }
+        }
+
+        this.state.totalCollectibles = this.collectibles.length;
+    }
+
+    spawnObstacles() {
+        const obstacleTypes = ['monkey', 'seagull', 'dog', 'raccoon', 'pigeon', 'trafficcone'];
+
+        // Monkeys in park
+        for (let i = 0; i < 5; i++) {
+            this.obstacles.push(new Obstacle(-80 + random()*40, -50 + random()*30, 'monkey'));
+        }
+
+        // Seagulls at waterfront
+        for (let i = 0; i < 8; i++) {
+            this.obstacles.push(new Obstacle(-60 + random()*120, -140 + random()*20, 'seagull'));
+        }
+
+        // Dogs in residential
+        for (let i = 0; i < 6; i++) {
+            this.obstacles.push(new Obstacle(-150 + random()*40, 40 + random()*50, 'dog'));
+        }
+
+        // Raccoons in commercial
+        for (let i = 0; i < 4; i++) {
+            this.obstacles.push(new Obstacle(90 + random()*40, 85 + random()*40, 'raccoon'));
+        }
+
+        // Pigeons downtown
+        for (let i = 0; i < 8; i++) {
+            this.obstacles.push(new Obstacle(130 + random()*50, -10 + random()*50, 'pigeon'));
+        }
+
+        // Traffic cones on roads
+        for (let i = 0; i < 10; i++) {
+            this.obstacles.push(new Obstacle(
+                (random()-0.5)*300, (random()-0.5)*200, 'trafficcone'
+            ));
+        }
+    }
+
+    spawnPlatforms() {
+        // Rooftop jumping challenges
+        this.movingPlatforms.push(new MovingPlatform(-20, 12, 30, 15, 0, 0, 0.5, 4, 0.5, 4));
+        this.movingPlatforms.push(new MovingPlatform(20, 10, -10, 0, 0, 15, 0.7, 3, 0.5, 3));
+        this.movingPlatforms.push(new MovingPlatform(130, 22, -10, 10, 3, 0, 0.4, 4, 0.5, 4));
+        this.movingPlatforms.push(new MovingPlatform(0, 5, -110, 20, 0, 0, 0.3, 5, 0.5, 3)); // Malecon
+        this.movingPlatforms.push(new MovingPlatform(250, 12, -50, 0, 5, 0, 0.6, 6, 0.5, 4)); // Airport elevator
+        this.movingPlatforms.push(new MovingPlatform(-60, 14, 90, 15, 0, 0, 0.5, 4, 0.5, 4)); // Hospital
+        this.movingPlatforms.push(new MovingPlatform(50, 14, -80, 0, 0, 15, 0.4, 4, 0.5, 4)); // Museum
+    }
+
+    spawnProps() {
+        // Benches
+        for (let i = 0; i < 30; i++) {
+            this.props.push(new InteractiveProp(
+                (random()-0.5)*400, (random()-0.5)*300, 'bench', 'A bench to rest on'
+            ));
+        }
+        // Food carts
+        for (let i = 0; i < 10; i++) {
+            this.props.push(new InteractiveProp(
+                (random()-0.5)*350, (random()-0.5)*250, 'food_cart', 'A food cart selling snacks'
+            ));
+        }
+        // Mailboxes
+        for (let i = 0; i < 15; i++) {
+            this.props.push(new InteractiveProp(
+                (random()-0.5)*400, (random()-0.5)*300, 'mailbox', 'A mailbox for sending letters'
+            ));
+        }
+        // Info kiosks
+        for (const d of Object.values(DISTRICTS)) {
+            this.props.push(new InteractiveProp(d.center.x + 10, d.center.z + 10, 'kiosk', `Info: ${d.name}`));
+        }
+    }
+
+    // ===== Game Loop =====
+    loop() {
+        const now = performance.now() / 1000;
+        if (!this.lastTime) this.lastTime = now;
+        const dt = min(now - this.lastTime, 0.05);
+        this.lastTime = now;
+
+        if (this.gameStarted && !this.paused && !this.inDialogue && !this.inMinigame) {
+            this.update(dt);
+        }
+
+        this.render();
+        this.updateUI();
+        this.input.clearFrame();
+        requestAnimationFrame(() => this.loop());
+    }
+
+    update(dt) {
+        this.time += dt;
+        this.state.playTime += dt;
+
+        // Day/night cycle (very slow)
+        this.dayTime = (this.dayTime + dt * 0.005) % 1;
+
+        this.updatePlayer(dt);
+        this.updateCamera(dt);
+        this.updateNPCs(dt);
+        this.updateCollectibles(dt);
+        this.updateObstacles(dt);
+        this.updatePlatforms(dt);
+        this.checkInteractions();
+        this.checkMissionProgress();
+
+        // Input for menus
+        if (this.input.wasPressed('Escape')) {
+            this.togglePause();
+        }
+        if (this.input.wasPressed('Tab')) {
+            this.toggleVocabPanel();
+        }
+        if (this.input.wasPressed('KeyI')) {
+            this.toggleInventoryPanel();
+        }
+
+        // Stamina regen
+        this.state.stamina = min(100, this.state.stamina + dt * 15);
+    }
+
+    updatePlayer(dt) {
+        const p = this.player;
+        const input = this.input;
+
+        // Rotation (left/right)
+        const rotSpeed = 3.0;
+        if (input.isDown('ArrowLeft')) {
+            p.rotation += rotSpeed * dt;
+        }
+        if (input.isDown('ArrowRight')) {
+            p.rotation -= rotSpeed * dt;
+        }
+
+        // Movement (forward/backward)
+        let moveInput = 0;
+        if (input.isDown('ArrowUp')) moveInput = 1;
+        if (input.isDown('ArrowDown')) moveInput = -0.5;
+
+        // Acceleration/deceleration
+        const targetSpeed = moveInput * p.maxSpeed;
+        const accel = moveInput !== 0 ? 20 : 30;
+        p.speed = lerp(p.speed, targetSpeed, min(1, accel * dt));
+
+        if (abs(p.speed) < 0.1) p.speed = 0;
+
+        // Apply movement in facing direction
+        const moveX = sin(p.rotation) * p.speed * dt;
+        const moveZ = cos(p.rotation) * p.speed * dt;
+        p.vel.x = moveX / dt;
+        p.vel.z = moveZ / dt;
+
+        // Gravity
+        if (!p.grounded) {
+            p.vel.y -= 25 * dt;
+        }
+
+        // Jump
+        if (input.wasPressed('Space') && p.grounded && this.state.stamina > 10) {
+            p.vel.y = p.jumpForce;
+            p.grounded = false;
+            this.state.stamina -= 10;
+            this.audio.playJump();
+        }
+
+        // Apply velocity
+        const newPos = p.pos.add(new Vec3(moveX, p.vel.y * dt, moveZ));
+
+        // Collision with buildings
+        for (const b of BUILDINGS) {
+            const halfW = b.w/2 + 0.5;
+            const halfD = b.d/2 + 0.5;
+            if (newPos.x > b.x - halfW && newPos.x < b.x + halfW &&
+                newPos.z > b.z - halfD && newPos.z < b.z + halfD &&
+                newPos.y < b.h) {
+                // Push out
+                const dx = newPos.x - b.x;
+                const dz = newPos.z - b.z;
+                if (abs(dx/halfW) > abs(dz/halfD)) {
+                    newPos.x = b.x + (dx > 0 ? halfW : -halfW);
+                } else {
+                    newPos.z = b.z + (dz > 0 ? halfD : -halfD);
+                }
+            }
+        }
+
+        // Platform collision
+        for (const plat of this.movingPlatforms) {
+            const hw = plat.w/2, hd = plat.d/2;
+            if (newPos.x > plat.pos.x - hw && newPos.x < plat.pos.x + hw &&
+                newPos.z > plat.pos.z - hd && newPos.z < plat.pos.z + hd) {
+                if (newPos.y >= plat.pos.y && newPos.y < plat.pos.y + 2 && p.vel.y <= 0) {
+                    newPos.y = plat.pos.y + plat.h/2 + 0.5;
+                    p.vel.y = 0;
+                    p.grounded = true;
+                }
+            }
+        }
+
+        // Ground collision
+        if (newPos.y <= 0.5) {
+            newPos.y = 0.5;
+            p.vel.y = 0;
+            p.grounded = true;
+        }
+
+        // Rooftop landing
+        for (const b of BUILDINGS) {
+            const halfW = b.w/2;
+            const halfD = b.d/2;
+            if (newPos.x > b.x - halfW && newPos.x < b.x + halfW &&
+                newPos.z > b.z - halfD && newPos.z < b.z + halfD) {
+                if (p.vel.y <= 0 && newPos.y <= b.h + 1.5 && newPos.y >= b.h) {
+                    newPos.y = b.h + 1;
+                    p.vel.y = 0;
+                    p.grounded = true;
+                }
+            }
+        }
+
+        // World bounds
+        newPos.x = clamp(newPos.x, -350, 350);
+        newPos.z = clamp(newPos.z, -250, 250);
+
+        p.pos.copy(newPos);
+
+        // Animation
+        if (abs(p.speed) > 0.5) {
+            p.animPhase += dt * abs(p.speed) * 0.5;
+            p.footstepTimer -= dt;
+            if (p.footstepTimer <= 0 && p.grounded) {
+                this.audio.playFootstep();
+                p.footstepTimer = 0.4;
+            }
+        }
+
+        // Obstacle collision
+        for (const obs of this.obstacles) {
+            if (!obs.active) continue;
+            const dx = p.pos.x - obs.x;
+            const dz = p.pos.z - obs.z;
+            const dist = sqrt(dx*dx + dz*dz);
+            if (dist < 1.5 && abs(p.pos.y - obs.y) < 2) {
+                // Bounce back
+                const nx = dx/dist, nz = dz/dist;
+                p.pos.x += nx * 0.5;
+                p.pos.z += nz * 0.5;
+                if (this.state.health > 0) {
+                    this.state.health = max(0, this.state.health - 2);
+                }
+            }
+        }
+    }
+
+    updateCamera(dt) {
+        const cam = this.camera;
+        const p = this.player;
+
+        cam.rotation = p.rotation;
+
+        // Target position behind player
+        const offsetX = -sin(cam.rotation) * cam.distance;
+        const offsetZ = -cos(cam.rotation) * cam.distance;
+        const targetCamPos = new Vec3(
+            p.pos.x + offsetX,
+            p.pos.y + 6,
+            p.pos.z + offsetZ
+        );
+
+        // Camera collision with buildings
+        let finalPos = targetCamPos.clone();
+        for (const b of BUILDINGS) {
+            const halfW = b.w/2 + 1;
+            const halfD = b.d/2 + 1;
+            if (finalPos.x > b.x - halfW && finalPos.x < b.x + halfW &&
+                finalPos.z > b.z - halfD && finalPos.z < b.z + halfD &&
+                finalPos.y < b.h + 2) {
+                finalPos.y = b.h + 3;
+            }
+        }
+
+        // Ground clamp
+        if (finalPos.y < 2) finalPos.y = 2;
+
+        // Smooth follow
+        cam.smoothPos.x = lerp(cam.smoothPos.x, finalPos.x, min(1, 5 * dt));
+        cam.smoothPos.y = lerp(cam.smoothPos.y, finalPos.y, min(1, 5 * dt));
+        cam.smoothPos.z = lerp(cam.smoothPos.z, finalPos.z, min(1, 5 * dt));
+
+        cam.pos.copy(cam.smoothPos);
+        cam.target.copy(p.pos).y += 2;
+    }
+
+    updateNPCs(dt) {
+        for (const npc of this.npcs) {
+            npc.update(dt);
+        }
+    }
+
+    updateCollectibles(dt) {
+        const p = this.player;
+        for (const c of this.collectibles) {
+            if (c.collected) continue;
+            c.bobPhase += dt * 2;
+            c.rotPhase += dt * 3;
+
+            // Check collection
+            const dx = p.pos.x - c.x;
+            const dy = p.pos.y - c.y;
+            const dz = p.pos.z - c.z;
+            const dist = sqrt(dx*dx + dy*dy + dz*dz);
+
+            if (dist < 2) {
+                c.collected = true;
+                this.state.score += c.value;
+                this.state.collectibles.push(c.type);
+                this.audio.playCollect();
+
+                if (c.vocabKey && VOCABULARY[c.vocabKey]) {
+                    this.learnVocabulary(c.vocabKey);
+                }
+
+                this.showNotification(`+${c.value} points!`);
+            }
+        }
+    }
+
+    updateObstacles(dt) {
+        for (const obs of this.obstacles) {
+            obs.update(dt);
+        }
+    }
+
+    updatePlatforms(dt) {
+        for (const plat of this.movingPlatforms) {
+            plat.update(dt);
+        }
+    }
+
+    checkInteractions() {
+        const p = this.player;
+        let nearest = null;
+        let nearestDist = 5;
+
+        // Check NPC interactions
+        for (const npc of this.npcs) {
+            const dx = p.pos.x - npc.x;
+            const dz = p.pos.z - npc.z;
+            const dist = sqrt(dx*dx + dz*dz);
+            if (dist < nearestDist && npc.interactable) {
+                nearest = { type: 'npc', object: npc, dist };
+                nearestDist = dist;
+            }
+        }
+
+        // Check building interactions
+        for (const b of BUILDINGS) {
+            if (!b.interactable) continue;
+            const dx = p.pos.x - b.x;
+            const dz = p.pos.z - (b.z + b.d/2 + 2);
+            const dist = sqrt(dx*dx + dz*dz);
+            if (dist < nearestDist) {
+                nearest = { type: 'building', object: b, dist };
+                nearestDist = dist;
+            }
+        }
+
+        // Check prop interactions
+        for (const prop of this.props) {
+            const dx = p.pos.x - prop.x;
+            const dz = p.pos.z - prop.z;
+            const dist = sqrt(dx*dx + dz*dz);
+            if (dist < nearestDist) {
+                nearest = { type: 'prop', object: prop, dist };
+                nearestDist = dist;
+            }
+        }
+
+        this.nearestInteractable = nearest;
+
+        const prompt = document.getElementById('interactPrompt');
+        if (nearest) {
+            const label = nearest.type === 'npc' ? `Talk to ${nearest.object.name}` :
+                nearest.type === 'building' ? `Enter ${nearest.object.name}` :
+                    `Examine ${nearest.object.label}`;
+            prompt.innerHTML = `Press <strong>E</strong> - ${label}`;
+            prompt.style.display = 'block';
+
+            if (this.input.wasPressed('KeyE')) {
+                this.interact(nearest);
+            }
+        } else {
+            prompt.style.display = 'none';
+        }
+    }
+
+    interact(target) {
+        this.audio.playInteract();
+
+        if (target.type === 'npc') {
+            const npc = target.object;
+            this.showDialogue(npc.name, npc.dialogues);
+        } else if (target.type === 'building') {
+            const b = target.object;
+            if (b.vocabKey) {
+                this.learnVocabulary(b.vocabKey);
+                b.visited = true;
+            }
+            this.showDialogue(b.name, [`Welcome to the ${b.name}!`, `This is the ${b.name}. A great place in our city!`]);
+        } else if (target.type === 'prop') {
+            this.showNotification(target.object.label);
+            target.object.interacted = true;
+        }
+    }
+
+    learnVocabulary(key) {
+        if (this.state.vocabularyLearned.has(key)) return;
+        this.state.vocabularyLearned.add(key);
+        const vocab = VOCABULARY[key];
+        if (vocab) {
+            this.showNotification(`📖 New Word: ${vocab.word} - ${vocab.definition}`);
+            this.state.score += 50;
+            this.audio.playSuccess();
+
+            // Check for achievement
+            if (this.state.vocabularyLearned.size === 5) {
+                this.showAchievement('Word Collector', 'Learned 5 vocabulary words!');
+            }
+            if (this.state.vocabularyLearned.size === 10) {
+                this.showAchievement('Language Explorer', 'Learned 10 vocabulary words!');
+            }
+            if (this.state.vocabularyLearned.size === Object.keys(VOCABULARY).length) {
+                this.showAchievement('Vocabulary Master', 'Learned ALL vocabulary words!');
+            }
+        }
+    }
+
+    checkMissionProgress() {
+        const mission = MISSIONS[this.state.currentMission];
+        if (!mission || this.state.currentMission >= 10) return;
+
+        if (mission.id === 9) {
+            // Final mission - need to complete vocabulary quiz
+            return;
+        }
+
+        if (mission.targetBuilding) {
+            const building = BUILDINGS.find(b => b.name === mission.targetBuilding);
+            if (building) {
+                const dx = this.player.pos.x - building.x;
+                const dz = this.player.pos.z - building.z;
+                const dist = sqrt(dx*dx + dz*dz);
+
+                if (dist < 15 && !this.state.missionsCompleted[mission.id]) {
+                    this.completeMission(mission.id);
+                }
+            }
+        }
+    }
+
+    completeMission(id) {
+        if (this.state.missionsCompleted[id]) return;
+        this.state.missionsCompleted[id] = true;
+        const mission = MISSIONS[id];
+        this.state.score += mission.reward;
+
+        if (mission.targetVocab) {
+            this.learnVocabulary(mission.targetVocab);
+        }
+
+        this.audio.playSuccess();
+        this.showNotification(`✅ Mission Complete: ${mission.title}! +${mission.reward} points`);
+
+        // Show completion dialogue
+        if (mission.completionDialogue) {
+            setTimeout(() => {
+                this.showDialogue(mission.completionDialogue[0].speaker,
+                    mission.completionDialogue.map(d => d.text));
+            }, 1500);
+        }
+
+        // Show mini-game quiz
+        setTimeout(() => {
+            if (mission.targetVocab) {
+                this.startMinigame(mission.targetVocab);
+            }
+        }, 4000);
+
+        // Advance to next mission
+        setTimeout(() => {
+            if (this.state.currentMission < 9) {
+                this.state.currentMission++;
+                this.startMissionDialogue(this.state.currentMission);
+            } else {
+                // Game complete!
+                this.gameComplete();
+            }
+        }, 6000);
+
+        // Achievement check
+        const completed = this.state.missionsCompleted.filter(Boolean).length;
+        if (completed === 5) this.showAchievement('Halfway There', 'Completed 5 missions!');
+        if (completed === 10) this.showAchievement('Santo Domingo Explorer', 'Completed all missions!');
+    }
+
+    startMissionDialogue(missionId) {
+        const mission = MISSIONS[missionId];
+        if (!mission) return;
+
+        if (mission.dialogues) {
+            this.showDialogue(mission.dialogues[0].speaker,
+                mission.dialogues.map(d => d.text));
+        }
+    }
+
+    showDialogue(speaker, texts) {
+        this.inDialogue = true;
+        this.dialogueQueue = texts;
+        this.dialogueIndex = 0;
+
+        const box = document.getElementById('dialogueBox');
+        const speakerEl = document.getElementById('dialogueSpeaker');
+        const textEl = document.getElementById('dialogueText');
+        const continueEl = document.getElementById('dialogueContinue');
+        const choicesEl = document.getElementById('dialogueChoices');
+
+        box.style.display = 'block';
+        speakerEl.textContent = speaker;
+        choicesEl.innerHTML = '';
+        continueEl.style.display = 'block';
+
+        this.typeText(textEl, texts[0]);
+
+        const advance = () => {
+            this.dialogueIndex++;
+            if (this.dialogueIndex < this.dialogueQueue.length) {
+                this.typeText(textEl, this.dialogueQueue[this.dialogueIndex]);
+            } else {
+                box.style.display = 'none';
+                this.inDialogue = false;
+                document.removeEventListener('keydown', handler);
+            }
+        };
+
+        const handler = (e) => {
+            if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') {
+                advance();
+                e.preventDefault();
+            }
+        };
+
+        document.addEventListener('keydown', handler);
+    }
+
+    typeText(el, text) {
+        el.textContent = '';
+        let i = 0;
+        const interval = setInterval(() => {
+            if (i < text.length) {
+                el.textContent += text[i];
+                i++;
+            } else {
+                clearInterval(interval);
+            }
+        }, 25);
+    }
+
+    startMinigame(vocabKey) {
+        const vocab = VOCABULARY[vocabKey];
+        if (!vocab) return;
+        this.inMinigame = true;
+
+        const overlay = document.getElementById('minigameOverlay');
+        const title = document.getElementById('minigameTitle');
+        const question = document.getElementById('minigameQuestion');
+        const options = document.getElementById('minigameOptions');
+
+        overlay.classList.add('active');
+        title.textContent = '📝 Vocabulary Challenge!';
+
+        // Generate question
+        const questionTypes = [
+            {
+                q: `What is a "${vocab.word}"?`,
+                correct: vocab.definition,
+                wrongs: this.getWrongDefinitions(vocabKey)
+            },
+            {
+                q: `Where would you go to ${vocab.definition.toLowerCase().replace('a place ', '').replace('where ', '')}?`,
+                correct: vocab.word,
+                wrongs: this.getWrongWords(vocabKey)
+            }
+        ];
+
+        const qt = questionTypes[floor(random()*questionTypes.length)];
+        question.textContent = qt.q;
+
+        const allOptions = [qt.correct, ...qt.wrongs.slice(0,3)];
+        // Shuffle
+        for (let i = allOptions.length - 1; i > 0; i--) {
+            const j = floor(random() * (i+1));
+            [allOptions[i], allOptions[j]] = [allOptions[j], allOptions[i]];
+        }
+
+        options.innerHTML = '';
+        for (const opt of allOptions) {
+            const btn = document.createElement('button');
+            btn.className = 'minigame-option';
+            btn.textContent = opt;
+            btn.onclick = () => {
+                if (opt === qt.correct) {
+                    btn.classList.add('correct');
+                    this.state.score += 25;
+                    this.audio.playSuccess();
+                    this.showNotification('✅ Correct! +25 points!');
+                } else {
+                    btn.classList.add('wrong');
+                    this.audio.playWrong();
+                    // Highlight correct
+                    options.querySelectorAll('.minigame-option').forEach(b => {
+                        if (b.textContent === qt.correct) b.classList.add('correct');
+                    });
+                }
+                setTimeout(() => {
+                    overlay.classList.remove('active');
+                    this.inMinigame = false;
+                }, 1500);
+            };
+            options.appendChild(btn);
+        }
+    }
+
+    getWrongDefinitions(correctKey) {
+        const keys = Object.keys(VOCABULARY).filter(k => k !== correctKey);
+        const shuffled = keys.sort(() => random() - 0.5);
+        return shuffled.slice(0,3).map(k => VOCABULARY[k].definition);
+    }
+
+    getWrongWords(correctKey) {
+        const keys = Object.keys(VOCABULARY).filter(k => k !== correctKey);
+        const shuffled = keys.sort(() => random() - 0.5);
+        return shuffled.slice(0,3).map(k => VOCABULARY[k].word);
+    }
+
+    gameComplete() {
+        this.state.gameComplete = true;
+        this.showNotification('🎉 Congratulations! You are now a Santo Domingo City Explorer!');
+        this.audio.playAchievement();
+        this.showAchievement('Santo Domingo City Explorer', 'Completed all 10 missions!');
+
+        // Start celebration
+        setTimeout(() => this.startCelebration(), 2000);
+    }
+
+    startCelebration() {
+        const celebration = document.getElementById('celebration');
+        celebration.classList.add('active');
+
+        const canvas = document.getElementById('fireworksCanvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+
+        const fireworks = [];
+
+        const createFirework = () => {
+            const x = random() * canvas.width;
+            const y = random() * canvas.height * 0.5;
+            const colors = ['#FFD700','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FF69B4','#87CEEB'];
+            const color = colors[floor(random()*colors.length)];
+
+            for (let i = 0; i < 30; i++) {
+                const angle = (i/30) * TAU;
+                const speed = 2 + random() * 3;
+                fireworks.push({
+                    x, y, vx: cos(angle)*speed, vy: sin(angle)*speed,
+                    life: 1, color, size: 2 + random()*2
+                });
+            }
+        };
+
+        let frame = 0;
+        const animateFireworks = () => {
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (frame % 30 === 0) createFirework();
+            if (frame % 45 === 0) createFirework();
+
+            for (let i = fireworks.length-1; i >= 0; i--) {
+                const f = fireworks[i];
+                f.x += f.vx;
+                f.y += f.vy;
+                f.vy += 0.05;
+                f.life -= 0.015;
+
+                if (f.life <= 0) {
+                    fireworks.splice(i, 1);
+                    continue;
+                }
+
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, f.size * f.life, 0, TAU);
+                ctx.fillStyle = f.color;
+                ctx.globalAlpha = f.life;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+
+            frame++;
+            if (frame < 600) {
+                requestAnimationFrame(animateFireworks);
+            } else {
+                celebration.classList.remove('active');
+            }
+        };
+        animateFireworks();
+    }
+
+    // ===== Rendering =====
+    render() {
+        const gl = this.gl;
+        const r = this.renderer;
+
+        // Sky color based on day/night
+        const dayProgress = this.dayTime;
+        let skyR, skyG, skyB;
+        if (dayProgress < 0.25) { // Night to dawn
+            const t = dayProgress / 0.25;
+            skyR = lerp(0.05, 0.6, t);
+            skyG = lerp(0.05, 0.5, t);
+            skyB = lerp(0.15, 0.7, t);
+        } else if (dayProgress < 0.5) { // Day
+            skyR = 0.4; skyG = 0.6; skyB = 0.9;
+        } else if (dayProgress < 0.75) { // Dusk
+            const t = (dayProgress - 0.5) / 0.25;
+            skyR = lerp(0.4, 0.8, t);
+            skyG = lerp(0.6, 0.4, t);
+            skyB = lerp(0.9, 0.5, t);
+        } else { // Night
+            const t = (dayProgress - 0.75) / 0.25;
+            skyR = lerp(0.8, 0.05, t);
+            skyG = lerp(0.4, 0.05, t);
+            skyB = lerp(0.5, 0.15, t);
+        }
+
+        gl.clearColor(skyR, skyG, skyB, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        // Matrices
+        const proj = new Mat4().perspective(60 * DEG, r.aspect, 0.5, 800);
+        const view = new Mat4().lookAt(this.camera.pos, this.camera.target, new Vec3(0,1,0));
+        const vp = proj.clone().multiply(view);
+
+        // Sun direction based on time
+        const sunAngle = this.dayTime * TAU - PI/2;
+        const lightDir = new Vec3(cos(sunAngle)*0.5, max(0.2, sin(sunAngle)), 0.3).normalized();
+        const sunIntensity = max(0.3, sin(sunAngle));
+        const lightColor = new Vec3(sunIntensity, sunIntensity * 0.95, sunIntensity * 0.9);
+        const ambient = new Vec3(0.2 + skyR*0.1, 0.2 + skyG*0.1, 0.25 + skyB*0.1);
+        const fogColor = new Vec3(skyR, skyG, skyB);
+
+        // Use main shader
+        const prog = r.programs.main;
+        gl.useProgram(prog.program);
+
+        // Set shared uniforms
+        gl.uniform3f(prog.uniforms.uLightDir, lightDir.x, lightDir.y, lightDir.z);
+        gl.uniform3f(prog.uniforms.uLightColor, lightColor.x, lightColor.y, lightColor.z);
+        gl.uniform3f(prog.uniforms.uAmbient, ambient.x, ambient.y, ambient.z);
+        gl.uniform3f(prog.uniforms.uCamPos, this.camera.pos.x, this.camera.pos.y, this.camera.pos.z);
+        gl.uniform3f(prog.uniforms.uFogColor, fogColor.x, fogColor.y, fogColor.z);
+        gl.uniform1f(prog.uniforms.uTime, this.time);
+        gl.uniform1f(prog.uniforms.uRoughness, 0.7);
+        gl.uniform1f(prog.uniforms.uMetallic, 0.0);
+        gl.uniform1f(prog.uniforms.uEmissive, 0.0);
+
+        // Render city
+        this.renderMesh(gl, prog, vp, this.meshes.city, new Mat4(), [1,1,1]);
+
+        // Render player
+        const playerModel = new Mat4()
+            .translate(this.player.pos.x, this.player.pos.y - 0.5, this.player.pos.z)
+            .rotateY(this.player.rotation);
+        this.renderMesh(gl, prog, vp, this.meshes.player, playerModel, [1,1,1]);
+
+        // Render NPCs
+        for (const npc of this.npcs) {
+            const dist = new Vec3(npc.x,0,npc.z).distTo(this.player.pos);
+            if (dist > 150) continue; // Cull distant NPCs
+
+            const bobY = abs(sin(npc.animPhase)) * 0.1;
+            const npcModel = new Mat4()
+                .translate(npc.x, npc.y + bobY, npc.z)
+                .rotateY(npc.rotation);
+            this.renderMesh(gl, prog, vp, this.meshes.npc, npcModel, npc.color);
+        }
+
+        // Render collectibles
+        for (const c of this.collectibles) {
+            if (c.collected) continue;
+            const dist = new Vec3(c.x,0,c.z).distTo(this.player.pos);
+            if (dist > 100) continue;
+
+            const bobY = sin(c.bobPhase) * 0.3;
+            const cModel = new Mat4()
+                .translate(c.x, c.y + bobY, c.z)
+                .rotateY(c.rotPhase);
+            gl.uniform1f(prog.uniforms.uEmissive, 0.5);
+            this.renderMesh(gl, prog, vp, this.meshes.collectible, cModel,
+                c.type === 'vocab_star' ? [1,0.8,0.2] : c.type === 'star' ? [1,1,0.3] : [1,0.85,0.1]);
+            gl.uniform1f(prog.uniforms.uEmissive, 0.0);
+        }
+
+        // Render obstacles
+        for (const obs of this.obstacles) {
+            if (!obs.active) continue;
+            const dist = new Vec3(obs.x,0,obs.z).distTo(this.player.pos);
+            if (dist > 100) continue;
+
+            const obsModel = new Mat4()
+                .translate(obs.x, obs.y, obs.z)
+                .rotateY(obs.rotation);
+
+            let color;
+            switch(obs.type) {
+                case 'monkey': color = [0.55, 0.35, 0.15]; break;
+                case 'seagull': color = [0.9, 0.9, 0.85]; break;
+                case 'dog': color = [0.6, 0.45, 0.25]; break;
+                case 'raccoon': color = [0.4, 0.4, 0.4]; break;
+                case 'pigeon': color = [0.5, 0.5, 0.55]; break;
+                case 'trafficcone': color = [1.0, 0.5, 0.1]; break;
+                default: color = [0.5, 0.5, 0.5];
+            }
+            this.renderMesh(gl, prog, vp, this.meshes.obstacle, obsModel, color);
+        }
+
+        // Render moving platforms
+        for (const plat of this.movingPlatforms) {
+            const platModel = new Mat4()
+                .translate(plat.pos.x, plat.pos.y, plat.pos.z);
+            this.renderMesh(gl, prog, vp, this.meshes.platform, platModel, [0.5,0.45,0.35]);
+        }
+
+        // Render water
+        const waterProg = r.programs.water;
+        gl.useProgram(waterProg.program);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        const waterModel = new Mat4();
+        const waterMVP = vp.clone().multiply(waterModel);
+        gl.uniformMatrix4fv(waterProg.uniforms.uMVP, false, waterMVP.m);
+        gl.uniformMatrix4fv(waterProg.uniforms.uModel, false, waterModel.m);
+        gl.uniform1f(waterProg.uniforms.uTime, this.time);
+        gl.uniform3f(waterProg.uniforms.uCamPos, this.camera.pos.x, this.camera.pos.y, this.camera.pos.z);
+        gl.uniform3f(waterProg.uniforms.uFogColor, fogColor.x, fogColor.y, fogColor.z);
+
+        bindMesh(gl, this.meshes.water);
+        gl.drawElements(gl.TRIANGLES, this.meshes.water.indexCount, gl.UNSIGNED_INT, 0);
+
+        gl.disable(gl.BLEND);
+    }
+
+    renderMesh(gl, prog, vp, mesh, model, baseColor) {
+        if (!mesh) return;
+        const mvp = vp.clone().multiply(model);
+        gl.uniformMatrix4fv(prog.uniforms.uMVP, false, mvp.m);
+        gl.uniformMatrix4fv(prog.uniforms.uModel, false, model.m);
+        gl.uniformMatrix3fv(prog.uniforms.uNormMat, false, model.getNormalMatrix());
+        gl.uniform3f(prog.uniforms.uBaseColor, baseColor[0], baseColor[1], baseColor[2]);
+
+        bindMesh(gl, mesh);
+        gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, 0);
+    }
+
+    // ===== UI Updates =====
+    updateUI() {
+        // Mission text
+        const mission = MISSIONS[this.state.currentMission];
+        if (mission) {
+            document.getElementById('hudMissionText').textContent = mission.description;
+            document.getElementById('hudMissionProgress').textContent = `Mission ${mission.id + 1} of 10`;
+        }
+
+        // Stats
+        document.getElementById('hudScore').textContent = this.state.score;
+        document.getElementById('hudVocab').textContent = this.state.vocabularyLearned.size;
+        document.getElementById('hudCollect').textContent =
+            this.collectibles.filter(c => c.collected).length;
+
+        // Bars
+        document.getElementById('healthBar').style.width = this.state.health + '%';
+        document.getElementById('staminaBar').style.width = this.state.stamina + '%';
+
+        // Compass
+        const compassDeg = ((this.player.rotation * 180 / PI) % 360 + 360) % 360;
+        const directions = ['S','SW','W','NW','N','NE','E','SE'];
+        const compassIdx = floor((compassDeg + 22.5) / 45) % 8;
+        document.getElementById('hudCompass').textContent = directions[compassIdx];
+
+        // Minimap
+        this.updateMinimap();
+    }
+
+    updateMinimap() {
+        const ctx = this.minimapCtx;
+        const w = 180, h = 180;
+        const scale = 0.35;
+
+        ctx.fillStyle = '#1a2a1a';
+        ctx.fillRect(0, 0, w, h);
+
+        const cx = w/2, cy = h/2;
+        const px = this.player.pos.x, pz = this.player.pos.z;
+
+        // Roads
+        ctx.strokeStyle = '#444';
+        ctx.lineWidth = 2;
+        const roads = [[0,0,500,8],[0,50,500,8],[0,100,500,8]];
+
+        // Buildings on minimap
+        for (const b of BUILDINGS) {
+            const bx = cx + (b.x - px) * scale;
+            const by = cy + (b.z - pz) * scale;
+            if (bx < -10 || bx > w+10 || by < -10 || by > h+10) continue;
+
+            ctx.fillStyle = b.interactable ?
+                (b.visited ? '#4a4' : '#da4') : '#666';
+            ctx.fillRect(bx - b.w*scale/2, by - b.d*scale/2, b.w*scale, b.d*scale);
+        }
+
+        // Collectibles
+        for (const c of this.collectibles) {
+            if (c.collected) continue;
+            const bx = cx + (c.x - px) * scale;
+            const by = cy + (c.z - pz) * scale;
+            if (bx < 0 || bx > w || by < 0 || by > h) continue;
+            ctx.fillStyle = '#ff0';
+            ctx.beginPath();
+            ctx.arc(bx, by, 2, 0, TAU);
+            ctx.fill();
+        }
+
+        // NPCs
+        for (const npc of this.npcs) {
+            const bx = cx + (npc.x - px) * scale;
+            const by = cy + (npc.z - pz) * scale;
+            if (bx < 0 || bx > w || by < 0 || by > h) continue;
+            ctx.fillStyle = npc.schedule === 'quest' ? '#4af' : '#8a8';
+            ctx.beginPath();
+            ctx.arc(bx, by, 1.5, 0, TAU);
+            ctx.fill();
+        }
+
+        // Mission target
+        const mission = MISSIONS[this.state.currentMission];
+        if (mission && mission.targetBuilding) {
+            const target = BUILDINGS.find(b => b.name === mission.targetBuilding);
+            if (target) {
+                const tx = cx + (target.x - px) * scale;
+                const ty = cy + (target.z - pz) * scale;
+                const pulse = (sin(this.time * 4) + 1) * 0.5;
+                ctx.strokeStyle = `rgba(255,215,0,${0.5+pulse*0.5})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(tx, ty, 5 + pulse*3, 0, TAU);
+                ctx.stroke();
+            }
+        }
+
+        // Player (center)
+        ctx.fillStyle = '#0f0';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4, 0, TAU);
+        ctx.fill();
+
+        // Player direction
+        ctx.strokeStyle = '#0f0';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + sin(this.player.rotation)*10, cy + cos(this.player.rotation)*10);
+        ctx.stroke();
+
+        // Circular mask
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.beginPath();
+        ctx.arc(w/2, h/2, w/2 - 2, 0, TAU);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // ===== Notifications & Achievements =====
+    showNotification(text) {
+        const div = document.createElement('div');
+        div.className = 'notification';
+        div.textContent = text;
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 3000);
+    }
+
+    showAchievement(name, desc) {
+        this.audio.playAchievement();
+        this.state.achievements.push(name);
+
+        const div = document.createElement('div');
+        div.className = 'achievement-popup';
+        div.innerHTML = `
+            <div class="achieve-title">🏆 ACHIEVEMENT UNLOCKED</div>
+            <div class="achieve-name">${name}</div>
+            <div class="achieve-desc">${desc}</div>
+        `;
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 4000);
+    }
+
+    // ===== Menu Functions =====
+    togglePause() {
+        this.paused = !this.paused;
+        document.getElementById('pauseMenu').classList.toggle('active', this.paused);
+    }
+
+    toggleVocabPanel() {
+        const panel = document.getElementById('vocabPanel');
+        const isActive = panel.classList.contains('active');
+        panel.classList.toggle('active');
+
+        if (!isActive) {
+            const grid = document.getElementById('vocabGrid');
+            grid.innerHTML = '';
+            for (const [key, vocab] of Object.entries(VOCABULARY)) {
+                const learned = this.state.vocabularyLearned.has(key);
+                const item = document.createElement('div');
+                item.className = 'vocab-item';
+                item.innerHTML = `
+                    <div class="vocab-english">${vocab.icon} ${learned ? vocab.word : '???'}</div>
+                    <div class="${learned ? 'vocab-learned' : 'vocab-locked'}">
+                        ${learned ? vocab.definition : 'Not yet discovered'}
+                    </div>
+                `;
+                grid.appendChild(item);
+            }
+        }
+    }
+
+    toggleInventoryPanel() {
+        const panel = document.getElementById('inventoryPanel');
+        panel.classList.toggle('active');
+
+        if (panel.classList.contains('active')) {
+            const grid = document.getElementById('invGrid');
+            grid.innerHTML = '';
+            const items = this.state.inventory;
+            for (let i = 0; i < 15; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'inv-slot' + (i < items.length ? ' filled' : '');
+                if (i < items.length) {
+                    slot.innerHTML = `
+                        <div class="inv-slot-icon">${items[i].icon || '📦'}</div>
+                        <div class="inv-slot-name">${items[i].name || 'Item'}</div>
+                    `;
+                }
+                grid.appendChild(slot);
+            }
+        }
+    }
+}
+
+// ===== Global Game Instance =====
+let game;
+
+function startGame() {
+    document.getElementById('mainMenu').classList.add('hidden');
+    game = new Game();
+    game.init();
+}
+
+function loadGame() {
+    document.getElementById('mainMenu').classList.add('hidden');
+    game = new Game();
+    const loaded = game.state.load();
+    if (loaded) {
+        game.player.pos.set(0, 1.5, 50); // Default position
+    }
+    game.init();
+    if (loaded) {
+        game.showNotification('Game loaded successfully!');
+    }
+}
+
+function showControls() {
+    alert('Controls:\n\n↑ Arrow = Move Forward\n↓ Arrow = Move Backward\n← Arrow = Turn Left\n→ Arrow = Turn Right\nSpace = Jump\nE = Interact\nTab = Vocabulary\nI = Inventory\nEsc = Pause');
+}
+
+function resumeGame() {
+    if (game) game.togglePause();
+}
+
+function saveGame() {
+    if (game) {
+        game.state.save();
+        game.showNotification('💾 Game saved!');
+    }
+}
+
+function toggleVocabPanel() {
+    if (game) game.toggleVocabPanel();
+}
+
+function toggleInventoryPanel() {
+    if (game) game.toggleInventoryPanel();
+}
+
+function quitToMenu() {
+    location.reload();
+}
+
+// Handle E key during dialogue/minigame when game exists
+document.addEventListener('keydown', (e) => {
+    if (!game) return;
+
+    if (e.code === 'Escape') {
+        if (game.inDialogue) {
+            document.getElementById('dialogueBox').style.display = 'none';
+            game.inDialogue = false;
+        } else if (game.inMinigame) {
+            document.getElementById('minigameOverlay').classList.remove('active');
+            game.inMinigame = false;
+        } else if (document.getElementById('vocabPanel').classList.contains('active')) {
+            game.toggleVocabPanel();
+        } else if (document.getElementById('inventoryPanel').classList.contains('active')) {
+            game.toggleInventoryPanel();
+        } else if (game.gameStarted) {
+            game.togglePause();
+        }
+        e.preventDefault();
+    }
+});
+</script>
+</body>
+</html>
